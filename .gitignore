@@ -1,0 +1,17 @@
+# Credenciais — NUNCA commitar
+api/config.php
+
+# Uploads de usuários — ficam só no servidor
+uploads/*
+!uploads/.htaccess
+
+# Arquivos de desenvolvimento local
+ad-generator.html
+CONTEXTO_CLAUDE_CODE.md
+.DS_Store
+*.DS_Store
+
+# Editores
+.vscode/
+.idea/
+*.swp

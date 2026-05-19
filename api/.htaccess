@@ -1,0 +1,10 @@
+# Bloqueia acesso direto a config.php
+<Files "config.php">
+    Require all denied
+</Files>
+
+# Bloqueia listagem de diretório
+Options -Indexes
+
+# Força UTF-8
+AddDefaultCharset UTF-8

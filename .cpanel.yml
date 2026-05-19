@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - /bin/mkdir -p uploads
+    - /bin/chmod 755 uploads

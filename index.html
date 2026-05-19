@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdForge — Gerador de Anúncios</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #0e0f11; --bg2: #161719; --bg3: #1e2024; --bg4: #25272c;
+    --border: #2e3138; --border2: #3a3d45;
+    --text: #ecedf0; --text2: #9da0aa; --text3: #5c6070;
+    --accent: #d4f24a; --accent2: #aec73a;
+    --accent-dim: rgba(212,242,74,0.12); --accent-dim2: rgba(212,242,74,0.06);
+    --red: #ff5a5a; --blue: #5b8fff;
+    --radius: 10px; --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 240px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { height: 52px; flex-shrink: 0; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* SIDEBAR */
+  .sidebar-logo { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+  .sidebar-section { padding: 12px 8px 4px; }
+  .sidebar-section-title { font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; padding: 0 8px 8px; }
+  .sidebar-btn { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; transition: all 0.15s; color: var(--text2); font-size: 13px; user-select: none; width: 100%; background: none; border: none; text-align: left; }
+  .sidebar-btn:hover { background: var(--bg3); color: var(--text); }
+  .sidebar-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .sidebar-btn .icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+  .sidebar-btn.active .icon { opacity: 1; }
+  .sidebar-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--bg4); color: var(--text3); margin-left: auto; }
+  .sidebar-btn.active .sidebar-tag { background: var(--accent-dim); color: var(--accent2); }
+  .sidebar-footer { margin-top: auto; padding: 12px 8px; border-top: 1px solid var(--border); }
+  .user-pill { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg3); }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7fff6a); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #0e0f11; flex-shrink: 0; }
+  .user-name { font-size: 12px; font-weight: 500; }
+  .user-role { font-size: 10px; color: var(--text3); }
+
+  /* TOPBAR */
+  .topbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; font-family: 'DM Sans', sans-serif; }
+  .btn-primary { background: var(--accent); color: #0e0f11; }
+  .btn-primary:hover { background: #c8e840; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+  .btn-danger { background: rgba(255,90,90,0.12); color: var(--red); border: 1px solid rgba(255,90,90,0.2); }
+  .btn-danger:hover { background: rgba(255,90,90,0.2); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* PROJECTS */
+  .page-header { margin-bottom: 24px; }
+  .page-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 24px; margin-bottom: 4px; }
+  .page-sub { color: var(--text2); font-size: 13px; }
+  .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .project-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+  .project-card:hover { border-color: var(--border2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .project-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-color, var(--accent)); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .project-card-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+  .project-card-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+  .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: var(--bg4); color: var(--text2); border: 1px solid var(--border); }
+  .project-meta { display: flex; align-items: center; justify-content: space-between; }
+  .project-ads-count { font-size: 11px; color: var(--text3); }
+  .project-add-card { background: transparent; border: 1px dashed var(--border2); border-radius: var(--radius-lg); padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; min-height: 160px; color: var(--text3); }
+  .project-add-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim2); }
+  .project-add-card svg { width: 28px; height: 28px; }
+  .project-add-card span { font-size: 13px; font-weight: 500; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: block; }
+  .form-input, .form-textarea, .form-select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s; outline: none; }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-select { cursor: pointer; }
+  .form-select option { background: var(--bg3); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-swatch { width: 32px; height: 32px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0; }
+  .color-swatch.selected { border-color: var(--text); }
+
+  /* ADS VIEW */
+  .project-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .project-header-back { width: 32px; height: 32px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); flex-shrink: 0; transition: all 0.15s; }
+  .project-header-back:hover { color: var(--text); border-color: var(--border2); }
+  .project-header-info { flex: 1; }
+  .project-badge { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .ads-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+  .ad-thumb { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; background: var(--bg3); }
+  .ad-thumb:hover { border-color: var(--border2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .ad-thumb-preview { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text3); position: relative; overflow: hidden; }
+  .ad-thumb-info { padding: 10px 12px; border-top: 1px solid var(--border); }
+  .ad-thumb-name { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+  .ad-thumb-date { font-size: 10px; color: var(--text3); }
+  .ad-add-card { border: 1px dashed var(--border2); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; height: 220px; cursor: pointer; transition: all 0.2s; color: var(--text3); }
+  .ad-add-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim2); }
+  .ad-add-card svg { width: 24px; height: 24px; }
+  .ad-add-card span { font-size: 12px; font-weight: 500; }
+
+  /* GENERATOR */
+  .gen-modal { max-width: 680px; }
+  .gen-steps { display: flex; gap: 8px; margin-bottom: 24px; }
+  .gen-step { flex: 1; text-align: center; font-size: 11px; padding: 6px 4px; border-radius: 6px; color: var(--text3); background: var(--bg3); border: 1px solid var(--border); }
+  .gen-step.active { color: var(--accent); background: var(--accent-dim); border-color: var(--accent); font-weight: 500; }
+  .gen-step.done { color: var(--text2); }
+  .gen-section { margin-bottom: 20px; }
+  .gen-section-title { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .type-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .type-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: all 0.15s; background: var(--bg3); }
+  .type-card:hover { border-color: var(--border2); }
+  .type-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+  .type-card-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .type-card-desc { font-size: 11px; color: var(--text2); }
+  .size-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .size-chip { padding: 5px 10px; border-radius: 20px; font-size: 11px; border: 1px solid var(--border); background: var(--bg3); cursor: pointer; transition: all 0.15s; color: var(--text2); }
+  .size-chip:hover { border-color: var(--border2); color: var(--text); }
+  .size-chip.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .inspiration-preview { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* EDITOR */
+  .editor-layout { display: flex; gap: 24px; height: calc(100vh - 52px - 48px); }
+  .editor-canvas-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .editor-panel { width: 280px; flex-shrink: 0; background: var(--bg2); border-left: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+  .panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .panel-tab { flex: 1; padding: 10px 8px; font-size: 12px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel-body { padding: 16px; flex: 1; }
+  .panel-section { margin-bottom: 20px; }
+  .panel-section-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+  .slide-list { display: flex; flex-direction: column; gap: 6px; }
+  .slide-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+  .slide-item:hover { border-color: var(--border2); }
+  .slide-item.active { border-color: var(--accent); background: var(--accent-dim); }
+  .slide-num { width: 20px; height: 20px; border-radius: 4px; background: var(--bg4); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; color: var(--text2); }
+  .slide-item.active .slide-num { background: var(--accent); color: #0e0f11; }
+  .slide-item-title { font-size: 12px; flex: 1; }
+
+  /* AD CANVAS */
+  .ad-canvas-wrapper { background: #111; border-radius: 12px; padding: 20px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .ad-canvas { position: relative; overflow: hidden; font-family: 'Syne', sans-serif; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; }
+  .ad-canvas .ad-bg { position: absolute; inset: 0; z-index: 0; }
+  .ad-canvas .ad-content { position: relative; z-index: 1; padding: 24px; width: 100%; }
+  .ad-canvas .ad-tag { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px; }
+  .ad-canvas .ad-headline { font-family: 'Syne', sans-serif; font-weight: 800; line-height: 1.1; margin-bottom: 10px; }
+  .ad-canvas .ad-body { font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.5; margin-bottom: 16px; opacity: 0.85; }
+  .ad-canvas .ad-cta { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 13px; padding: 10px 20px; border-radius: 8px; display: inline-block; }
+  .ad-canvas .ad-logo { position: absolute; top: 16px; right: 16px; z-index: 2; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800; opacity: 0.9; }
+  .carousel-nav { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); cursor: pointer; transition: all 0.15s; }
+  .carousel-dot.active { background: var(--accent); width: 18px; border-radius: 3px; }
+  .generating-overlay { display: none; position: absolute; inset: 0; background: rgba(14,15,17,0.9); border-radius: 12px; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 50; }
+  .generating-overlay.show { display: flex; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .generating-text { font-size: 13px; color: var(--text2); }
+
+  /* EXPORT */
+  .export-sizes { display: flex; flex-direction: column; gap: 8px; }
+  .export-size-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); }
+  .export-size-label { font-size: 12px; flex: 1; }
+  .export-size-dim { font-size: 10px; color: var(--text3); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 200; background: var(--bg3); border: 1px solid var(--border); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 10px; font-size: 13px; color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,0.4); transform: translateY(80px); opacity: 0; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* EMPTY STATE */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; text-align: center; color: var(--text3); }
+  .empty-state svg { width: 40px; height: 40px; opacity: 0.4; }
+  .empty-state p { font-size: 13px; max-width: 260px; }
+  .section-divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .inspired-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 3px 8px; border-radius: 20px; background: rgba(91,143,255,0.12); color: #5b8fff; border: 1px solid rgba(91,143,255,0.2); }
+
+  /* SETTINGS */
+  .settings-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); padding-bottom:0; }
+  .settings-tab { padding:8px 16px; font-size:13px; font-weight:500; background:none; border:none; color:var(--text2); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.15s; font-family:'DM Sans',sans-serif; margin-bottom:-1px; }
+  .settings-tab:hover { color:var(--text); }
+  .settings-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+  /* USERS TABLE */
+  .users-table { width:100%; border-collapse:collapse; }
+  .users-table th { text-align:left; font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; padding:8px 12px; border-bottom:1px solid var(--border); }
+  .users-table td { padding:12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+  .users-table tr:last-child td { border-bottom:none; }
+  .users-table tr:hover td { background:var(--bg3); }
+  .user-avatar-sm { width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .role-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:3px 8px; border-radius:20px; font-weight:500; border:1px solid transparent; }
+  .role-admin    { background:rgba(167,139,250,0.12); color:#a78bfa; border-color:rgba(167,139,250,0.25); }
+  .role-editor   { background:rgba(29,158,117,0.12);  color:#1d9e75; border-color:rgba(29,158,117,0.25); }
+  .role-approver { background:rgba(245,158,11,0.12);  color:#f59e0b; border-color:rgba(245,158,11,0.25); }
+  .role-viewer   { background:rgba(156,163,175,0.12); color:#9ca3af; border-color:rgba(156,163,175,0.25); }
+  .status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .status-active { background:#34d399; } .status-inactive { background:var(--text3); } .status-pending { background:#f59e0b; }
+  .ad-status { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:2px 7px; border-radius:20px; font-weight:500; }
+  .ad-status-draft    { background:var(--bg4); color:var(--text3); }
+  .ad-status-review   { background:rgba(91,143,255,0.12); color:#5b8fff; }
+  .ad-status-approved { background:rgba(52,211,153,0.12); color:#34d399; }
+  .ad-status-rejected { background:rgba(255,90,90,0.12);  color:#ff5a5a; }
+  .assign-table { width:100%; border-collapse:collapse; }
+  .assign-table th { text-align:left; font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; padding:8px 12px; border-bottom:1px solid var(--border); }
+  .assign-table td { padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+  .assign-table tr:last-child td { border-bottom:none; }
+  .assign-table tr:hover td { background:var(--bg3); }
+  .assign-select { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .assign-select:focus { outline:none; border-color:var(--accent); }
+
+  /* AI SETTINGS */
+  .ai-provider-logo { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; font-family:'Syne',sans-serif; letter-spacing:-0.5px; }
+
+  /* BRAIN */
+  .brain-strength { display:inline-flex; align-items:center; gap:6px; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500; }
+  .brain-low    { background:rgba(255,90,90,0.1);  color:var(--red); }
+  .brain-medium { background:rgba(245,158,11,0.1); color:#f59e0b; }
+  .brain-high   { background:rgba(52,211,153,0.1); color:#34d399; }
+  .context-block { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
+  .context-block-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .context-type-badge { font-size:10px; padding:2px 8px; border-radius:20px; background:var(--bg4); color:var(--text2); border:1px solid var(--border); }
+  .context-block-date { font-size:10px; color:var(--text3); margin-left:auto; }
+  .context-block-text { font-size:13px; color:var(--text); line-height:1.6; }
+  .context-block-actions { margin-top:10px; display:flex; gap:6px; }
+  .reference-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; }
+  .ref-type-icon { width:32px; height:32px; border-radius:8px; background:var(--bg4); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; }
+  .voice-section { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .voice-section-title { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:10px; }
+  .voice-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .voice-chip-use   { background:rgba(52,211,153,0.1); color:#34d399; border:1px solid rgba(52,211,153,0.2); font-size:11px; padding:3px 10px; border-radius:20px; }
+  .voice-chip-avoid { background:rgba(255,90,90,0.1);  color:var(--red); border:1px solid rgba(255,90,90,0.2); font-size:11px; padding:3px 10px; border-radius:20px; }
+  .learning-card { background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); padding:12px 16px; margin-bottom:8px; font-size:13px; line-height:1.6; }
+  .learning-source { font-size:10px; color:var(--text3); margin-top:6px; }
+  .brain-score-bar { height:4px; background:var(--bg4); border-radius:2px; margin-top:8px; overflow:hidden; }
+  .brain-score-fill { height:100%; border-radius:2px; background:var(--accent); transition:width 0.5s; }
+  #ref-upload-area:hover { border-color:var(--accent); background:var(--accent-dim2); }
+  #ref-upload-area.has-image { border-style:solid; border-color:var(--border2); padding:10px; }
+
+  /* LOGIN */
+  #screen-loader { position:fixed; inset:0; background:var(--bg); z-index:300; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+  #screen-login  { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; align-items:center; justify-content:center; }
+  #screen-login.show { display:flex; }
+  #screen-app { display:none; height:100vh; }
+  #screen-app.show { display:block; }
+  .login-box { width:100%; max-width:380px; padding:32px 28px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); }
+  .login-error { display:none; font-size:12px; color:var(--red); background:rgba(255,90,90,.08); border:1px solid rgba(255,90,90,.2); border-radius:8px; padding:10px 12px; margin-bottom:16px; }
+  .login-error.show { display:block; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="screen-loader">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--text2)">Carregando AdForge...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent)">AdForge</div>
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:4px">Gerador de Anúncios</div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">E-mail</label>
+      <input class="form-input" id="login-email" type="email" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="handleLogin()" id="login-btn">Entrar</button>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:16px">Acesso restrito — solicite convite ao administrador.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">AdForge</div>
+      <div class="logo-sub">Gerador de Anúncios</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Menu</div>
+      <button class="sidebar-btn active" onclick="showView('projects')" id="nav-projects">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>
+        </svg>
+        Projetos
+        <span class="sidebar-tag" id="projects-count">0</span>
+      </button>
+      <button class="sidebar-btn" onclick="showView('settings')" id="nav-settings">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42"/>
+        </svg>
+        Configurações
+      </button>
+    </div>
+    <div class="sidebar-section" id="sidebar-projects-list"></div>
+    <div class="sidebar-footer">
+      <div class="user-pill" id="user-pill">
+        <div class="avatar" id="user-avatar">AD</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-name">Admin</div>
+          <div class="user-role" id="user-role">Proprietário</div>
+        </div>
+        <button onclick="handleLogout()" title="Sair" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;border-radius:4px;display:flex;align-items:center" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Projetos</div>
+      <div id="topbar-actions"></div>
+    </div>
+    <div class="content" id="main-content">
+
+      <!-- PROJECTS VIEW -->
+      <div class="view active" id="view-projects">
+        <div class="page-header">
+          <div class="page-title">Seus Projetos</div>
+          <div class="page-sub">Gerencie marcas e crie anúncios incríveis</div>
+        </div>
+        <div class="projects-grid" id="projects-grid">
+          <div class="project-add-card" onclick="openNewProject()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Novo Projeto</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADS VIEW -->
+      <div class="view" id="view-ads">
+        <div class="project-header">
+          <div class="project-header-back" onclick="showView('projects')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="10,4 6,8 10,12"/></svg>
+          </div>
+          <div class="project-header-info">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="ads-project-name"></div>
+            <div style="font-size:12px;color:var(--text2)" id="ads-project-desc"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="openEditProject(state.currentProject?.id)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>
+            Editar projeto
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="openBrain()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M6 2C4.3 2 3 3.3 3 5c0 .8.3 1.5.8 2C2.8 7.4 2 8.6 2 10c0 1.9 1.4 3.5 3.2 3.9.5.4 1.1.6 1.8.6h6c.7 0 1.3-.2 1.8-.6C16.6 13.5 14 11.9 14 10c0-1.4-.8-2.6-1.8-3 .5-.5.8-1.2.8-2 0-1.7-1.3-3-3-3"/></svg>
+            Cérebro
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openGenerator()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6Z"/></svg>
+            Gerar Anúncio
+          </button>
+        </div>
+        <div id="ads-tags-row" class="tags" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+          <input class="form-input" id="ads-search" placeholder="Buscar anúncios..." style="max-width:220px;padding:7px 12px" oninput="filterAds()">
+          <div style="display:flex;gap:4px">
+            <button class="size-chip selected" data-filter="all" onclick="setAdsFilter('all',this)">Todos</button>
+            <button class="size-chip" data-filter="draft" onclick="setAdsFilter('draft',this)">Rascunho</button>
+            <button class="size-chip" data-filter="review" onclick="setAdsFilter('review',this)">Em revisão</button>
+            <button class="size-chip" data-filter="approved" onclick="setAdsFilter('approved',this)">Aprovados</button>
+            <button class="size-chip" data-filter="rejected" onclick="setAdsFilter('rejected',this)">Rejeitados</button>
+          </div>
+        </div>
+        <div class="ads-grid" id="ads-grid"></div>
+      </div>
+
+      <!-- BRAIN VIEW -->
+      <div class="view" id="view-brain">
+        <div class="project-header">
+          <div class="project-header-back" onclick="showView('ads')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="10,4 6,8 10,12"/></svg>
+          </div>
+          <div class="project-header-info">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px" id="brain-project-name"></div>
+            <div style="font-size:12px;color:var(--text2)">Cérebro do Projeto — memória acumulativa de marca</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="synthesizeBrain()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6Z"/></svg>
+            Sintetizar com IA
+          </button>
+        </div>
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:0">
+          <button class="settings-tab active" onclick="switchBrainTab('context')" id="btab-context">Contexto</button>
+          <button class="settings-tab" onclick="switchBrainTab('voice')" id="btab-voice">Tom de Voz</button>
+          <button class="settings-tab" onclick="switchBrainTab('references')" id="btab-references">Referências</button>
+          <button class="settings-tab" onclick="switchBrainTab('learnings')" id="btab-learnings">Aprendizados</button>
+        </div>
+        <div id="btab-content-context" style="margin-top:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:12px;color:var(--text2)">Blocos de contexto acumulativos. Cada adição fica registrada com data.</div>
+            <button class="btn btn-primary btn-sm" onclick="openAddContext()">+ Adicionar contexto</button>
+          </div>
+          <div id="context-blocks-list"></div>
+        </div>
+        <div id="btab-content-voice" style="display:none;margin-top:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:12px;color:var(--text2)">Guia de linguagem da marca. Gerado pela IA a partir dos anúncios aprovados ou editado manualmente.</div>
+            <button class="btn btn-ghost btn-sm" onclick="synthesizeVoice()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M14 8A6 6 0 1 1 8 2M14 2v4h-4"/></svg>
+              Gerar com IA
+            </button>
+          </div>
+          <div id="voice-content"></div>
+        </div>
+        <div id="btab-content-references" style="display:none;margin-top:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:12px;color:var(--text2)">Imagens e materiais externos que inspiram a criação.</div>
+            <button class="btn btn-primary btn-sm" onclick="openAddReference()">+ Adicionar referência</button>
+          </div>
+          <div id="references-list"></div>
+        </div>
+        <div id="btab-content-learnings" style="display:none;margin-top:20px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Padrões extraídos automaticamente dos anúncios aprovados e feedbacks.</div>
+          <div id="learnings-content"></div>
+        </div>
+      </div>
+
+      <!-- EDITOR VIEW -->
+      <div class="view" id="view-editor" style="padding:0;height:calc(100vh - 52px);overflow:hidden">
+        <div class="editor-layout">
+          <div class="editor-canvas-area" id="editor-canvas-area">
+            <div style="position:relative">
+              <div class="generating-overlay" id="gen-overlay">
+                <div class="spinner"></div>
+                <div class="generating-text" id="gen-text">Gerando com IA...</div>
+              </div>
+              <div class="ad-canvas-wrapper" id="canvas-wrapper">
+                <div class="ad-canvas" id="ad-canvas"></div>
+                <div class="carousel-nav" id="carousel-nav" style="display:none"></div>
+              </div>
+            </div>
+          </div>
+          <div class="editor-panel">
+            <div class="panel-tabs">
+              <div class="panel-tab active" onclick="switchTab('content')" id="tab-content">Conteúdo</div>
+              <div class="panel-tab" onclick="switchTab('design')" id="tab-design">Design</div>
+              <div class="panel-tab" onclick="switchTab('export')" id="tab-export">Exportar</div>
+            </div>
+            <div class="panel-body" id="panel-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div class="view" id="view-settings">
+        <div class="page-header">
+          <div class="page-title">Configurações</div>
+          <div class="page-sub">Gerencie usuários, perfis e acessos por projeto</div>
+        </div>
+        <div class="settings-tabs">
+          <button class="settings-tab active" onclick="switchSettingsTab('users')" id="stab-users">Usuários</button>
+          <button class="settings-tab" onclick="switchSettingsTab('assignments')" id="stab-assignments">Atribuições por Projeto</button>
+          <button class="settings-tab" onclick="switchSettingsTab('ai')" id="stab-ai">Provedor de IA</button>
+        </div>
+        <div id="stab-content-users">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;margin-top:20px">
+            <div style="font-size:13px;color:var(--text2)" id="users-summary"></div>
+            <button class="btn btn-primary btn-sm" onclick="openInviteModal()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M8 1v14M1 8h14"/></svg>
+              Convidar usuário
+            </button>
+          </div>
+          <div id="users-table-wrap"></div>
+        </div>
+        <div id="stab-content-assignments" style="display:none">
+          <div style="margin-top:20px;margin-bottom:16px">
+            <label class="form-label">Selecionar projeto</label>
+            <select class="form-select" id="assign-project-select" onchange="renderAssignments()" style="max-width:320px"></select>
+          </div>
+          <div id="assignments-table-wrap"></div>
+        </div>
+        <div id="stab-content-ai" style="display:none">
+          <div style="max-width:600px;margin-top:24px">
+            <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Ative os provedores disponíveis para gerar anúncios. Configure a chave de API de cada um.</div>
+            <div id="ai-provider-cards" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div><!-- /screen-app -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-invite">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Convidar Usuário</div>
+    <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="invite-name" placeholder="Ex: Maria Silva"></div>
+    <div class="form-group"><label class="form-label">E-mail *</label><input class="form-input" id="invite-email" type="email" placeholder="maria@empresa.com"></div>
+    <div class="form-group">
+      <label class="form-label">Perfil global padrão</label>
+      <select class="form-select" id="invite-role">
+        <option value="editor">Editor</option><option value="approver">Aprovador</option>
+        <option value="viewer">Visualizador</option><option value="admin">Admin</option>
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Você poderá ajustar o acesso por projeto depois.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite')">Cancelar</button>
+      <button class="btn btn-primary" onclick="inviteUser()">Enviar Convite</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-invite-url">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">✓ Convite Criado</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Copie o link abaixo e envie ao usuário. Expira após ser aceito.</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:12px;word-break:break-all;color:var(--accent);margin-bottom:16px;user-select:all" id="invite-url-text"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite-url')">Fechar</button>
+      <button class="btn btn-primary" onclick="copyInviteUrl()">Copiar link</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Editar Usuário</div>
+    <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="edit-user-name"></div>
+    <div class="form-group">
+      <label class="form-label">Perfil global</label>
+      <select class="form-select" id="edit-user-role">
+        <option value="admin">Admin</option><option value="editor">Editor</option>
+        <option value="approver">Aprovador</option><option value="viewer">Visualizador</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="edit-user-status">
+        <option value="active">Ativo</option><option value="inactive">Inativo</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancelar</button>
+      <button class="btn btn-danger btn-sm" onclick="removeUser()">Remover</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <div class="modal-title" id="proj-modal-title">Novo Projeto</div>
+    <div class="form-group"><label class="form-label">Nome do projeto *</label><input class="form-input" id="proj-name" placeholder="Ex: Clínica Bella Saúde"></div>
+    <div class="form-group"><label class="form-label">Contexto e público-alvo</label><textarea class="form-textarea" id="proj-ctx" placeholder="Ex: Clínica estética voltada para mulheres 25-45 anos, classe B/C. Tom: acolhedor e moderno."></textarea></div>
+    <div class="form-group"><label class="form-label">Tags / Nicho (separadas por vírgula)</label><input class="form-input" id="proj-tags" placeholder="saúde, estética, beleza"></div>
+    <div class="form-group">
+      <label class="form-label">Cor do projeto</label>
+      <div class="color-row" id="proj-colors">
+        <div class="color-swatch selected" style="background:#d4f24a" data-color="#d4f24a" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#5b8fff" data-color="#5b8fff" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#ff5a5a" data-color="#ff5a5a" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#f59e0b" data-color="#f59e0b" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#a78bfa" data-color="#a78bfa" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#34d399" data-color="#34d399" onclick="selectColor(this)"></div>
+        <div class="color-swatch" style="background:#f472b6" data-color="#f472b6" onclick="selectColor(this)"></div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Nome/Logo da marca (texto)</label><input class="form-input" id="proj-logo" placeholder="Ex: Bella"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-project')">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="proj-delete-btn" style="display:none" onclick="deleteProject()">Excluir</button>
+      <button class="btn btn-primary" id="proj-save-btn" onclick="saveProject()">Criar Projeto</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-generator">
+  <div class="modal gen-modal">
+    <div class="modal-title">✦ Gerar Anúncio com IA</div>
+    <div class="gen-steps">
+      <div class="gen-step active" id="gstep-1">1. Tipo</div>
+      <div class="gen-step" id="gstep-2">2. Prompt</div>
+      <div class="gen-step" id="gstep-3">3. Tamanhos</div>
+    </div>
+    <div id="gform-1">
+      <div class="gen-section">
+        <div class="gen-section-title">Formato do anúncio</div>
+        <div class="type-cards">
+          <div class="type-card selected" id="type-single" onclick="selectType('single')"><div class="type-card-name">Imagem Única</div><div class="type-card-desc">1 arte completa com headline, body e CTA</div></div>
+          <div class="type-card" id="type-carousel" onclick="selectType('carousel')"><div class="type-card-name">Carrossel</div><div class="type-card-desc">Múltiplos slides contando uma história</div></div>
+        </div>
+      </div>
+      <div class="gen-section" id="carousel-slides-section" style="display:none">
+        <div class="gen-section-title">Número de slides</div>
+        <div class="size-chips">
+          <div class="size-chip selected" data-slides="3" onclick="selectSlides(this)">3 slides</div>
+          <div class="size-chip" data-slides="4" onclick="selectSlides(this)">4 slides</div>
+          <div class="size-chip" data-slides="5" onclick="selectSlides(this)">5 slides</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-generator')">Cancelar</button>
+        <button class="btn btn-primary" onclick="genStep(2)">Próximo →</button>
+      </div>
+    </div>
+    <div id="gform-2" style="display:none">
+      <div class="gen-section">
+        <div class="gen-section-title">Objetivo do anúncio</div>
+        <div class="size-chips" id="objective-chips">
+          <div class="size-chip selected" data-obj="conversion" onclick="selectObjective(this)">Conversão</div>
+          <div class="size-chip" data-obj="awareness" onclick="selectObjective(this)">Awareness</div>
+          <div class="size-chip" data-obj="engagement" onclick="selectObjective(this)">Engajamento</div>
+          <div class="size-chip" data-obj="retention" onclick="selectObjective(this)">Retenção</div>
+        </div>
+      </div>
+      <div class="gen-section">
+        <div class="gen-section-title">O que você quer anunciar?</div>
+        <textarea class="form-textarea" id="gen-prompt" placeholder="Ex: Promoção de limpeza de pele com 30% de desconto neste mês." style="min-height:100px"></textarea>
+      </div>
+      <div class="gen-section">
+        <div class="gen-section-title">Inspiração por nicho</div>
+        <div class="inspiration-preview" id="inspiration-preview">Buscando projetos do mesmo nicho...</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="genStep(1)">← Voltar</button>
+        <button class="btn btn-primary" onclick="genStep(3)">Próximo →</button>
+      </div>
+    </div>
+    <div id="gform-3" style="display:none">
+      <div class="gen-section">
+        <div class="gen-section-title">Tamanhos para exportar</div>
+        <div class="size-chips">
+          <div class="size-chip selected" data-size="feed">Feed 1:1 (1080×1080)</div>
+          <div class="size-chip" data-size="stories">Stories 9:16 (1080×1920)</div>
+          <div class="size-chip" data-size="landscape">Paisagem 16:9 (1280×720)</div>
+          <div class="size-chip" data-size="portrait">Retrato 4:5 (1080×1350)</div>
+        </div>
+      </div>
+      <div class="gen-section">
+        <div class="gen-section-title">Provedor de IA</div>
+        <div id="gen-provider-chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        <div id="gen-provider-hint" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="genStep(2)">← Voltar</button>
+        <button class="btn btn-primary" onclick="startGeneration()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6Z"/></svg>
+          Gerar com IA
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-context">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">Adicionar Contexto</div>
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" id="ctx-type">
+        <option value="positioning">Posicionamento</option><option value="audience">Público-alvo</option>
+        <option value="product">Produto / Serviço</option><option value="campaign">Campanha ativa</option>
+        <option value="restriction">Restrição / Evitar</option><option value="other">Outro</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Conteúdo *</label><textarea class="form-textarea" id="ctx-content" style="min-height:120px" placeholder="Ex: A partir de outubro, comunicação foca em procedimentos não-invasivos para o público masculino 30-50 anos."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-context')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContext()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-reference">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">Adicionar Referência Visual</div>
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" id="ref-type">
+        <option value="competitor">Concorrente</option><option value="inspiration">Inspiração visual</option>
+        <option value="campaign">Campanha de referência</option><option value="brand">Marca aspiracional</option>
+        <option value="other">Outro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Imagem de referência (opcional)</label>
+      <div id="ref-upload-area" onclick="document.getElementById('ref-image-input').click()" style="border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg3)">
+        <div id="ref-upload-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;margin:0 auto 8px;display:block;opacity:0.4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+          <div style="font-size:12px;color:var(--text3)">Clique para carregar uma imagem</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">PNG, JPG, WEBP — até 5MB</div>
+        </div>
+        <img id="ref-image-preview" style="display:none;max-height:180px;max-width:100%;border-radius:6px;margin:0 auto">
+      </div>
+      <input type="file" id="ref-image-input" accept="image/*" style="display:none" onchange="handleRefImageUpload(this)">
+    </div>
+    <div class="form-group"><label class="form-label">Descrição *</label><textarea class="form-textarea" id="ref-desc" style="min-height:90px" placeholder="Ex: Campanha de inverno da Natura 2024 — tons frios, linguagem poética, foco em autocuidado."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-reference')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-ref" onclick="saveReference()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-reject">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Rejeitar Anúncio</div>
+    <div class="form-group"><label class="form-label">Motivo da rejeição *</label><textarea class="form-textarea" id="reject-reason" style="min-height:100px" placeholder="Ex: O tom ficou muito agressivo. Prefiro uma abordagem mais acolhedora."></textarea></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px">Este feedback será salvo nos aprendizados do projeto.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reject')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Rejeitar com feedback</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rename-ad">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Renomear Anúncio</div>
+    <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="rename-ad-input" placeholder="Ex: Promo Limpeza de Pele — Outubro"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rename-ad')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmRenameAd()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+const state = {
+  user: null,
+  token: localStorage.getItem('adforge_token'),
+  projects: [],
+  currentProject: null,
+  editingProjectId: null,
+  ads: [],
+  currentAd: null,
+  currentSlide: 0,
+  adsFilter: 'all',
+  brain: { contexts: [], voice: null, references: [], learnings: [] },
+  aiSettings: {},
+  users: [],
+  editingUserId: null,
+  refUpload: null,
+  gen: { type: 'single', slides: 3, objective: 'conversion', sizes: ['feed'], prompt: '', provider: null, model: null },
+  currentPanelTab: 'content',
+};
+
+// ══════════════════════════════════════════════════════════════
+// API HELPERS
+// ══════════════════════════════════════════════════════════════
+async function api(file, params = '', method = 'GET', body = null) {
+  const url = `api/${file}${params ? '?' + params : ''}`;
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  const opts = { method, headers, credentials: 'include' };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+  return data.data;
+}
+
+async function apiUpload(file, projectId) {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('project_id', projectId);
+  const headers = {};
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  const res = await fetch('api/upload.php', { method: 'POST', headers, body: fd, credentials: 'include' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Erro no upload');
+  return data.data;
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════════════
+let _toastTimer;
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderLeftColor = type === 'err' ? 'var(--red)' : 'var(--accent)';
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function selectColor(el) {
+  el.closest('.color-row').querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function initials(name) {
+  return (name || '??').trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function roleName(r) {
+  return { admin: 'Admin', editor: 'Editor', approver: 'Aprovador', viewer: 'Visualizador', none: 'Sem acesso' }[r] || r;
+}
+
+function statusName(s) {
+  return { draft: 'Rascunho', review: 'Em revisão', approved: 'Aprovado', rejected: 'Rejeitado' }[s] || s;
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.classList.remove('show');
+  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const data = await api('auth.php', 'action=login', 'POST', { email, password: pass });
+    state.token = data.token;
+    localStorage.setItem('adforge_token', data.token);
+    state.user = data.user;
+    showApp();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+
+async function handleLogout() {
+  try { await api('auth.php', 'action=logout', 'POST'); } catch (_) {}
+  state.token = null; state.user = null;
+  localStorage.removeItem('adforge_token');
+  document.getElementById('screen-app').classList.remove('show');
+  document.getElementById('screen-login').classList.add('show');
+  document.getElementById('login-password').value = '';
+}
+
+async function initApp() {
+  const params = new URLSearchParams(location.search);
+  const inviteToken = params.get('invite');
+  try {
+    const user = await api('auth.php', 'action=me');
+    state.user = user;
+    if (inviteToken) showToast('Você já está autenticado.');
+    showApp();
+  } catch (_) {
+    document.getElementById('screen-loader').style.display = 'none';
+    document.getElementById('screen-login').classList.add('show');
+    if (inviteToken) showToast('Convite recebido — faça login para aceitar.', 'ok');
+  }
+}
+
+function showApp() {
+  document.getElementById('screen-loader').style.display = 'none';
+  document.getElementById('screen-login').classList.remove('show');
+  document.getElementById('screen-app').classList.add('show');
+  const u = state.user;
+  document.getElementById('user-avatar').textContent = initials(u.name);
+  document.getElementById('user-name').textContent = u.name;
+  document.getElementById('user-role').textContent = roleName(u.role);
+  document.getElementById('nav-settings').style.display = u.role === 'admin' ? '' : 'none';
+  loadProjects();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROJECTS
+// ══════════════════════════════════════════════════════════════
+async function loadProjects() {
+  try {
+    state.projects = await api('projects.php', 'action=list');
+    renderProjects();
+    renderSidebarProjects();
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+function renderProjects() {
+  document.getElementById('projects-count').textContent = state.projects.length;
+  let html = `<div class="project-add-card" onclick="openNewProject()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span>Novo Projeto</span>
+  </div>`;
+  for (const p of state.projects) {
+    const tags = (p.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+    html += `<div class="project-card" style="--card-color:${p.color}" onclick="openProject(${p.id})">
+      <div class="project-card-name">${p.name}</div>
+      ${p.context ? `<div class="project-card-desc">${p.context.slice(0, 80)}${p.context.length > 80 ? '…' : ''}</div>` : ''}
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      <div class="project-meta">
+        <span class="project-ads-count">${p.ads_count || 0} anúncio${p.ads_count !== 1 ? 's' : ''}</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:${p.color};opacity:.8">${p.logo || ''}</span>
+      </div>
+    </div>`;
+  }
+  document.getElementById('projects-grid').innerHTML = html;
+}
+
+function renderSidebarProjects() {
+  const list = document.getElementById('sidebar-projects-list');
+  if (!state.projects.length) { list.innerHTML = ''; return; }
+  let html = `<div class="sidebar-section-title" style="padding:0 18px 8px">Projetos</div>`;
+  for (const p of state.projects.slice(0, 8)) {
+    const active = state.currentProject?.id === p.id;
+    html += `<button class="sidebar-btn ${active ? 'active' : ''}" onclick="openProject(${p.id})">
+      <span style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0"></span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
+    </button>`;
+  }
+  list.innerHTML = html;
+}
+
+function openNewProject() {
+  state.editingProjectId = null;
+  document.getElementById('proj-modal-title').textContent = 'Novo Projeto';
+  document.getElementById('proj-name').value = '';
+  document.getElementById('proj-ctx').value = '';
+  document.getElementById('proj-tags').value = '';
+  document.getElementById('proj-logo').value = '';
+  document.getElementById('proj-delete-btn').style.display = 'none';
+  document.getElementById('proj-save-btn').textContent = 'Criar Projeto';
+  document.getElementById('proj-colors').querySelectorAll('.color-swatch').forEach((s, i) => s.classList.toggle('selected', i === 0));
+  openModal('modal-project');
+}
+
+function openEditProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  state.editingProjectId = id;
+  document.getElementById('proj-modal-title').textContent = 'Editar Projeto';
+  document.getElementById('proj-name').value = p.name;
+  document.getElementById('proj-ctx').value = p.context || '';
+  document.getElementById('proj-tags').value = (p.tags || []).join(', ');
+  document.getElementById('proj-logo').value = p.logo || '';
+  document.getElementById('proj-delete-btn').style.display = state.user.role === 'admin' ? '' : 'none';
+  document.getElementById('proj-save-btn').textContent = 'Salvar Projeto';
+  document.getElementById('proj-colors').querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('selected', s.dataset.color === p.color));
+  openModal('modal-project');
+}
+
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { showToast('Nome é obrigatório.', 'err'); return; }
+  const color = document.querySelector('#proj-colors .color-swatch.selected')?.dataset.color || '#d4f24a';
+  const tags = document.getElementById('proj-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const body = { name, context: document.getElementById('proj-ctx').value.trim(), tags, color, logo: document.getElementById('proj-logo').value.trim() };
+  const btn = document.getElementById('proj-save-btn');
+  btn.disabled = true;
+  try {
+    if (state.editingProjectId) {
+      await api('projects.php', `action=update&id=${state.editingProjectId}`, 'PUT', body);
+      showToast('Projeto atualizado!');
+    } else {
+      await api('projects.php', 'action=create', 'POST', body);
+      showToast('Projeto criado!');
+    }
+    closeModal('modal-project');
+    await loadProjects();
+  } catch (e) { showToast(e.message, 'err'); }
+  finally { btn.disabled = false; }
+}
+
+async function deleteProject() {
+  if (!confirm('Excluir este projeto e todos os seus anúncios? Esta ação não pode ser desfeita.')) return;
+  try {
+    await api('projects.php', `action=delete&id=${state.editingProjectId}`, 'DELETE');
+    closeModal('modal-project');
+    state.currentProject = null;
+    showView('projects');
+    await loadProjects();
+    showToast('Projeto excluído.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function openProject(id) {
+  state.currentProject = state.projects.find(x => x.id === id) || null;
+  if (!state.currentProject) return;
+  renderSidebarProjects();
+  showView('ads');
+  await loadAds();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADS
+// ══════════════════════════════════════════════════════════════
+async function loadAds() {
+  if (!state.currentProject) return;
+  try {
+    state.ads = await api('ads.php', `action=list&project_id=${state.currentProject.id}`);
+    renderAds();
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+function renderAds() {
+  const p = state.currentProject;
+  document.getElementById('ads-project-name').innerHTML = `<span class="project-badge" style="background:${p.color}"></span>${p.name}`;
+  document.getElementById('ads-project-desc').textContent = p.context || '';
+  document.getElementById('ads-tags-row').innerHTML = (p.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  renderAdsGrid(filterAdsArr());
+}
+
+function filterAdsArr() {
+  const f = state.adsFilter;
+  const q = (document.getElementById('ads-search')?.value || '').toLowerCase();
+  return state.ads.filter(a => {
+    if (f !== 'all' && a.status !== f) return false;
+    if (q && !a.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function setAdsFilter(filter, el) {
+  state.adsFilter = filter;
+  document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  renderAdsGrid(filterAdsArr());
+}
+
+function filterAds() { renderAdsGrid(filterAdsArr()); }
+
+function renderAdsGrid(ads) {
+  let html = `<div class="ad-add-card" onclick="openGenerator()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L14.5 9H22L16 13.5L18 21L12 16.5L6 21L8 13.5L2 9H9.5Z"/></svg>
+    <span>Gerar com IA</span>
+  </div>`;
+  for (const ad of ads) {
+    const slide = ad.slides?.[0] || {};
+    html += `<div class="ad-thumb" onclick="openEditor(${ad.id})">
+      <div class="ad-thumb-preview" style="background:${ad.bgColor || '#1e2024'}">
+        <div style="padding:12px;width:100%">
+          ${slide.headline ? `<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;line-height:1.2;color:${ad.textColor || '#fff'}">${slide.headline.slice(0, 50)}</div>` : ''}
+          ${slide.body ? `<div style="font-size:9px;margin-top:4px;opacity:.7;line-height:1.4;color:${ad.textColor || '#fff'}">${slide.body.slice(0, 60)}</div>` : ''}
+          ${slide.cta ? `<div style="font-size:9px;font-weight:600;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:6px;background:${ad.accentColor || '#d4f24a'};color:#0e0f11">${slide.cta}</div>` : ''}
+        </div>
+        <div style="position:absolute;top:8px;right:8px"><span class="ad-status ad-status-${ad.status}">${statusName(ad.status)}</span></div>
+        <div style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openRenameAd(${ad.id})" style="padding:3px 6px">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();duplicateAd(${ad.id})" style="padding:3px 6px">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M2 11V3a2 2 0 0 1 2-2h8"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ad-thumb-info">
+        <div class="ad-thumb-name">${ad.name}</div>
+        <div class="ad-thumb-date">${fmtDate(ad.createdAt)} · ${ad.type === 'carousel' ? (ad.slides?.length || 1) + ' slides' : 'imagem única'}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('ads-grid').innerHTML = html;
+}
+
+let _renamingAdId = null;
+function openRenameAd(id) {
+  _renamingAdId = id;
+  const ad = state.ads.find(a => a.id === id);
+  document.getElementById('rename-ad-input').value = ad?.name || '';
+  openModal('modal-rename-ad');
+}
+
+async function confirmRenameAd() {
+  const name = document.getElementById('rename-ad-input').value.trim();
+  if (!name) return;
+  try {
+    await api('ads.php', `action=update&id=${_renamingAdId}`, 'PUT', { name });
+    const idx = state.ads.findIndex(a => a.id === _renamingAdId);
+    if (idx !== -1) state.ads[idx].name = name;
+    if (state.currentAd?.id === _renamingAdId) { state.currentAd.name = name; document.getElementById('topbar-title').textContent = name; }
+    renderAdsGrid(filterAdsArr());
+    closeModal('modal-rename-ad');
+    showToast('Anúncio renomeado.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function duplicateAd(id) {
+  try {
+    const newAd = await api('ads.php', `action=duplicate&id=${id}`, 'POST');
+    state.ads.unshift(newAd);
+    renderAdsGrid(filterAdsArr());
+    showToast('Anúncio duplicado!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// GENERATOR
+// ══════════════════════════════════════════════════════════════
+function openGenerator() {
+  state.gen = { type: 'single', slides: 3, objective: 'conversion', sizes: ['feed'], prompt: '', provider: null, model: null };
+  genStep(1);
+  document.getElementById('gen-prompt').value = '';
+  loadInspirations();
+  openModal('modal-generator');
+}
+
+function selectType(t) {
+  state.gen.type = t;
+  document.getElementById('type-single').classList.toggle('selected', t === 'single');
+  document.getElementById('type-carousel').classList.toggle('selected', t === 'carousel');
+  document.getElementById('carousel-slides-section').style.display = t === 'carousel' ? '' : 'none';
+}
+
+function selectSlides(el) {
+  state.gen.slides = parseInt(el.dataset.slides);
+  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function genStep(n) {
+  [1, 2, 3].forEach(i => {
+    document.getElementById(`gform-${i}`).style.display = i === n ? '' : 'none';
+    const s = document.getElementById(`gstep-${i}`);
+    s.classList.toggle('active', i === n);
+    s.classList.toggle('done', i < n);
+  });
+  if (n === 3) renderGenProviderChips();
+}
+
+function loadInspirations() {
+  const approved = state.ads.filter(a => a.status === 'approved').slice(0, 3);
+  const preview = document.getElementById('inspiration-preview');
+  if (approved.length) {
+    preview.innerHTML = approved.map(a => `<div style="margin-bottom:6px">✦ <strong>${a.name}</strong> — "${(a.slides?.[0]?.headline || '').slice(0, 60)}"</div>`).join('');
+  } else {
+    preview.textContent = 'Nenhum anúncio aprovado neste projeto ainda.';
+  }
+}
+
+function selectObjective(el) {
+  state.gen.objective = el.dataset.obj;
+  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+const PROVIDER_MODELS = {
+  anthropic: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-7'],
+  openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+  google:    ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+  groq:      ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+};
+
+function renderGenProviderChips() {
+  const container = document.getElementById('gen-provider-chips');
+  const hint = document.getElementById('gen-provider-hint');
+  const s = state.aiSettings;
+  const available = Object.keys(PROVIDER_MODELS).filter(id => s[id]?.enabled && s[id]?.has_key);
+  if (!available.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--red)">Nenhum provedor configurado. Vá em Configurações → Provedor de IA.</div>';
+    hint.textContent = ''; return;
+  }
+  if (!state.gen.provider || !available.includes(state.gen.provider)) {
+    state.gen.provider = available[0];
+    const ms = s[available[0]]?.enabled_models;
+    state.gen.model = ms?.length ? ms[0] : PROVIDER_MODELS[available[0]][0];
+  }
+  const PNAMES = { anthropic: 'Claude', openai: 'GPT-4o', google: 'Gemini', groq: 'Groq' };
+  let html = '';
+  for (const id of available) {
+    const sel = state.gen.provider === id;
+    const models = s[id]?.enabled_models?.length ? s[id].enabled_models : PROVIDER_MODELS[id];
+    html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">
+      <button class="size-chip ${sel ? 'selected' : ''}" onclick="selectGenProvider('${id}')">${PNAMES[id] || id}</button>
+      ${sel ? `<select class="assign-select" onchange="state.gen.model=this.value" style="font-size:11px;max-width:220px">
+        ${models.map(m => `<option value="${m}" ${m === state.gen.model ? 'selected' : ''}>${m}</option>`).join('')}
+      </select>` : ''}
+    </div>`;
+  }
+  container.innerHTML = html;
+  hint.textContent = state.gen.model ? `Gerando com: ${state.gen.provider} / ${state.gen.model}` : '';
+}
+
+function selectGenProvider(id) {
+  state.gen.provider = id;
+  const ms = state.aiSettings[id]?.enabled_models;
+  state.gen.model = ms?.length ? ms[0] : (PROVIDER_MODELS[id]?.[0] || '');
+  renderGenProviderChips();
+}
+
+async function startGeneration() {
+  const prompt = document.getElementById('gen-prompt').value.trim();
+  if (!prompt) { showToast('Descreva o que deseja anunciar.', 'err'); return; }
+  if (!state.gen.provider) { showToast('Selecione um provedor de IA.', 'err'); return; }
+  state.gen.prompt = prompt;
+  const sizes = [];
+  document.querySelectorAll('#gform-3 .size-chip.selected[data-size]').forEach(el => sizes.push(el.dataset.size));
+  state.gen.sizes = sizes.length ? sizes : ['feed'];
+  closeModal('modal-generator');
+  showView('editor');
+
+  const placeholder = {
+    id: null, name: 'Gerando anúncio...', type: state.gen.type, objective: state.gen.objective,
+    bgColor: '#1e2024', textColor: '#ffffff', accentColor: state.currentProject?.color || '#d4f24a',
+    slides: [{ headline: '', body: '', cta: '' }], sizes: state.gen.sizes, status: 'draft',
+  };
+  state.currentAd = placeholder;
+  state.currentSlide = 0;
+  state.currentPanelTab = 'content';
+  renderEditor();
+  document.getElementById('gen-overlay').classList.add('show');
+  document.getElementById('gen-text').textContent = 'Gerando com IA...';
+
+  try {
+    const slides = await generateAdWithAI();
+    placeholder.slides = slides;
+    const saved = await api('ads.php', 'action=create', 'POST', {
+      project_id: state.currentProject.id,
+      name: `Anúncio ${new Date().toLocaleDateString('pt-BR')} — ${state.gen.objective}`,
+      type: state.gen.type, objective: state.gen.objective, slides,
+      sizes: state.gen.sizes, bgColor: placeholder.bgColor,
+      textColor: placeholder.textColor, accentColor: placeholder.accentColor,
+      generated_by: `${state.gen.provider}/${state.gen.model}`,
+    });
+    state.currentAd = saved;
+    state.ads.unshift(saved);
+    renderEditor();
+    showToast('Anúncio gerado!');
+  } catch (e) {
+    showToast('Erro ao gerar: ' + e.message, 'err');
+    const fallback = makeFallbackAd();
+    placeholder.slides = fallback;
+    try {
+      const saved = await api('ads.php', 'action=create', 'POST', {
+        project_id: state.currentProject.id,
+        name: `Anúncio ${new Date().toLocaleDateString('pt-BR')}`,
+        type: state.gen.type, objective: state.gen.objective, slides: fallback,
+        sizes: state.gen.sizes, bgColor: placeholder.bgColor,
+        textColor: placeholder.textColor, accentColor: placeholder.accentColor,
+      });
+      state.currentAd = saved;
+      state.ads.unshift(saved);
+    } catch (_) {}
+    renderEditor();
+  } finally {
+    document.getElementById('gen-overlay').classList.remove('show');
+  }
+}
+
+async function generateAdWithAI() {
+  const { provider, model, type, slides: numSlides, objective, prompt } = state.gen;
+  const brain = buildBrainContext();
+  const p = state.currentProject;
+  const SYSTEM = `Você é especialista em copywriting para redes sociais. Responda SOMENTE com JSON válido, sem texto extra.`;
+  const USER = `Crie um anúncio ${type === 'carousel' ? `carrossel com ${numSlides} slides` : 'de imagem única'}.
+
+Projeto: ${p?.name || ''}
+Contexto: ${p?.context || ''}
+${brain ? `Contexto de marca:\n${brain}\n` : ''}Objetivo: ${objective}
+O que anunciar: ${prompt}
+
+Retorne SOMENTE este JSON:
+{"slides":[{"headline":"Título (máx 60 chars)","body":"Texto (máx 120 chars)","cta":"CTA (máx 25 chars)","tag":"Tag opcional (máx 20 chars)"}]}
+${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. Primeiro: gancho. Meio: desenvolvimento. Último: CTA forte.`}`;
+
+  const cfg = state.aiSettings;
+  const key = cfg[provider]?.api_key;
+  if (!key) throw new Error('Chave de API não configurada para ' + provider);
+
+  let content = '';
+
+  if (provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-use': 'true',
+      },
+      body: JSON.stringify({ model, max_tokens: 1024, system: SYSTEM, messages: [{ role: 'user', content: USER }] }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Anthropic'); }
+    const d = await res.json();
+    content = d.content?.[0]?.text || '';
+
+  } else if (provider === 'openai') {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: USER }], max_tokens: 1024 }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro OpenAI'); }
+    const d = await res.json();
+    content = d.choices?.[0]?.message?.content || '';
+
+  } else if (provider === 'google') {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: SYSTEM + '\n\n' + USER }] }], generationConfig: { maxOutputTokens: 1024 } }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Google'); }
+    const d = await res.json();
+    content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  } else if (provider === 'groq') {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: USER }], max_tokens: 1024 }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Groq'); }
+    const d = await res.json();
+    content = d.choices?.[0]?.message?.content || '';
+  }
+
+  const m = content.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Resposta da IA sem JSON válido');
+  const parsed = JSON.parse(m[0]);
+  if (!Array.isArray(parsed.slides) || !parsed.slides.length) throw new Error('Formato de resposta inválido');
+  return parsed.slides;
+}
+
+function makeFallbackAd() {
+  return [{ headline: state.currentProject?.name ? `Conheça ${state.currentProject.name}` : 'Sua solução aqui', body: state.gen.prompt.slice(0, 120) || 'Saiba mais sobre nossos serviços.', cta: 'Saiba Mais', tag: 'Novidade' }];
+}
+
+function buildBrainContext() {
+  const b = state.brain;
+  let out = '';
+  if (b.contexts?.length) out += b.contexts.map(c => `[${c.type}] ${c.content}`).join('\n') + '\n';
+  if (b.voice?.personality) {
+    out += `\nTom: ${b.voice.personality}`;
+    if (b.voice.useWords?.length) out += `\nUsar: ${b.voice.useWords.join(', ')}`;
+    if (b.voice.avoidWords?.length) out += `\nEvitar: ${b.voice.avoidWords.join(', ')}`;
+  }
+  if (b.learnings?.length) out += '\nAprendizados:\n' + b.learnings.slice(0, 5).map(l => `- ${l.text}`).join('\n');
+  return out.trim();
+}
+
+// ══════════════════════════════════════════════════════════════
+// EDITOR
+// ══════════════════════════════════════════════════════════════
+function openEditor(id) {
+  const ad = state.ads.find(a => a.id === id);
+  if (!ad) return;
+  state.currentAd = ad;
+  state.currentSlide = 0;
+  state.currentPanelTab = 'content';
+  showView('editor');
+  renderEditor();
+}
+
+function renderEditor() {
+  const ad = state.currentAd;
+  if (!ad) return;
+  document.getElementById('topbar-title').textContent = ad.name || 'Editor';
+  document.getElementById('topbar-actions').innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+    ${ad.id ? `<button class="btn btn-ghost btn-sm" onclick="regenAd()">↻ Gerar novamente</button>` : ''}
+    <button class="btn btn-primary btn-sm" onclick="saveCurrentAd()">Salvar</button>
+  </div>`;
+  renderCanvas();
+  renderPanelContent();
+}
+
+const AD_SIZES = {
+  feed:      { w: 1080, h: 1080, label: 'Feed 1:1' },
+  stories:   { w: 1080, h: 1920, label: 'Stories 9:16' },
+  landscape: { w: 1280, h: 720,  label: 'Paisagem 16:9' },
+  portrait:  { w: 1080, h: 1350, label: 'Retrato 4:5' },
+};
+
+function renderCanvas() {
+  const ad = state.currentAd;
+  if (!ad) return;
+  const slide = ad.slides?.[state.currentSlide] || {};
+  const sz = AD_SIZES[ad.sizes?.[0]] || AD_SIZES.feed;
+  const maxH = Math.min(window.innerHeight - 220, 480);
+  const scale = maxH / sz.h;
+  const dw = Math.round(sz.w * scale);
+  const dh = Math.round(sz.h * scale);
+  const hSize = Math.max(16, Math.floor(sz.h * 0.048 * scale));
+  const bSize = Math.max(10, Math.floor(sz.h * 0.018 * scale));
+  const canvas = document.getElementById('ad-canvas');
+  const nav = document.getElementById('carousel-nav');
+  canvas.style.cssText = `width:${dw}px;height:${dh}px;background:${ad.bgColor || '#1e2024'}`;
+  canvas.innerHTML = `
+    <div class="ad-bg" style="background:${ad.bgColor || '#1e2024'}"></div>
+    <div class="ad-logo" style="color:${ad.accentColor || '#d4f24a'};font-size:${Math.max(10, 13 * scale)}px">${state.currentProject?.logo || ''}</div>
+    <div class="ad-content">
+      ${slide.tag ? `<div class="ad-tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px">${slide.tag}</div>` : ''}
+      <div class="ad-headline" style="color:${ad.textColor || '#fff'};font-size:${hSize}px">${slide.headline || ''}</div>
+      ${slide.body ? `<div class="ad-body" style="color:${ad.textColor || '#fff'};font-size:${bSize}px">${slide.body}</div>` : ''}
+      ${slide.cta ? `<div class="ad-cta" style="background:${ad.accentColor || '#d4f24a'};color:#0e0f11;font-size:${Math.max(9, 13 * scale)}px">${slide.cta}</div>` : ''}
+    </div>`;
+  if (ad.type === 'carousel' && ad.slides?.length > 1) {
+    nav.style.display = '';
+    nav.innerHTML = ad.slides.map((_, i) => `<div class="carousel-dot ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})"></div>`).join('');
+  } else {
+    nav.style.display = 'none';
+  }
+}
+
+function goSlide(i) {
+  state.currentSlide = i;
+  renderCanvas();
+  if (state.currentPanelTab === 'content') renderPanelContent();
+}
+
+function renderPanelContent() {
+  const ad = state.currentAd;
+  if (!ad) return;
+  const tab = state.currentPanelTab;
+  ['content', 'design', 'export'].forEach(t => document.getElementById(`tab-${t}`)?.classList.toggle('active', t === tab));
+  const body = document.getElementById('panel-body');
+  const canEdit = ['admin', 'editor'].includes(state.user?.role);
+
+  if (tab === 'content') {
+    const slide = ad.slides?.[state.currentSlide] || {};
+    let slidesHtml = '';
+    if (ad.type === 'carousel') {
+      slidesHtml = `<div class="panel-section"><div class="panel-section-title">Slides</div><div class="slide-list">
+        ${(ad.slides || []).map((s, i) => `<div class="slide-item ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})">
+          <div class="slide-num">${i + 1}</div>
+          <div class="slide-item-title">${(s.headline || 'Slide ' + (i + 1)).slice(0, 28)}</div>
+        </div>`).join('')}
+      </div></div>`;
+    }
+    const escVal = v => (v || '').replace(/"/g, '&quot;');
+    body.innerHTML = `${slidesHtml}
+      <div class="panel-section"><div class="panel-section-title">Slide ${state.currentSlide + 1}</div>
+        ${canEdit ? `
+          <div class="form-group"><label class="form-label">Tag</label><input class="form-input" value="${escVal(slide.tag)}" oninput="updateSlide('tag',this.value)" placeholder="Ex: Oferta"></div>
+          <div class="form-group"><label class="form-label">Headline *</label><textarea class="form-textarea" style="min-height:70px" oninput="updateSlide('headline',this.value)" placeholder="Título impactante">${slide.headline || ''}</textarea></div>
+          <div class="form-group"><label class="form-label">Corpo</label><textarea class="form-textarea" style="min-height:70px" oninput="updateSlide('body',this.value)" placeholder="Texto de suporte">${slide.body || ''}</textarea></div>
+          <div class="form-group"><label class="form-label">CTA</label><input class="form-input" value="${escVal(slide.cta)}" oninput="updateSlide('cta',this.value)" placeholder="Ex: Saiba Mais"></div>
+        ` : `
+          <div style="font-size:13px;font-weight:600">${slide.headline || ''}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">${slide.body || ''}</div>
+          ${slide.cta ? `<div style="font-size:12px;margin-top:6px;color:var(--accent)">${slide.cta}</div>` : ''}
+        `}
+      </div>
+      ${ad.id ? renderApprovalActions() : ''}`;
+
+  } else if (tab === 'design') {
+    body.innerHTML = `
+      <div class="panel-section"><div class="panel-section-title">Paleta de cores</div>
+        <div class="form-group"><label class="form-label">Fundo</label><input type="color" class="form-input" value="${ad.bgColor || '#1e2024'}" oninput="updateAdProp('bgColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+        <div class="form-group"><label class="form-label">Texto</label><input type="color" class="form-input" value="${ad.textColor || '#ffffff'}" oninput="updateAdProp('textColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+        <div class="form-group"><label class="form-label">Destaque</label><input type="color" class="form-input" value="${ad.accentColor || '#d4f24a'}" oninput="updateAdProp('accentColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+      </div>
+      <div class="panel-section"><div class="panel-section-title">Tamanhos</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${Object.entries(AD_SIZES).map(([k, v]) => `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+            <input type="checkbox" ${(ad.sizes || []).includes(k) ? 'checked' : ''} onchange="toggleSize('${k}',this.checked)">
+            ${v.label}<span style="font-size:10px;color:var(--text3)">${v.w}×${v.h}</span>
+          </label>`).join('')}
+        </div>
+      </div>`;
+
+  } else if (tab === 'export') {
+    body.innerHTML = `
+      <div class="panel-section"><div class="panel-section-title">Exportar PNG</div>
+        <div class="export-sizes">
+          ${(ad.sizes || ['feed']).map(s => { const sz = AD_SIZES[s] || AD_SIZES.feed;
+            return `<div class="export-size-item">
+              <div class="export-size-label">${sz.label}</div>
+              <div class="export-size-dim">${sz.w}×${sz.h}</div>
+              <button class="btn btn-ghost btn-sm" onclick="exportAd('${s}')">PNG</button>
+            </div>`; }).join('')}
+        </div>
+        ${ad.type === 'carousel' ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;justify-content:center" onclick="exportAllSlides()">Exportar todos os slides</button>` : ''}
+      </div>`;
+  }
+}
+
+function switchTab(tab) { state.currentPanelTab = tab; renderPanelContent(); }
+
+function updateSlide(field, value) {
+  if (!state.currentAd.slides[state.currentSlide]) state.currentAd.slides[state.currentSlide] = {};
+  state.currentAd.slides[state.currentSlide][field] = value;
+  renderCanvas();
+}
+
+function updateAdProp(prop, value) { state.currentAd[prop] = value; renderCanvas(); }
+
+function toggleSize(size, checked) {
+  const sizes = state.currentAd.sizes = state.currentAd.sizes || ['feed'];
+  if (checked && !sizes.includes(size)) sizes.push(size);
+  else if (!checked) {
+    const i = sizes.indexOf(size);
+    if (i !== -1) sizes.splice(i, 1);
+    if (!sizes.length) { showToast('Mantenha ao menos 1 tamanho.', 'err'); sizes.push(size); renderPanelContent(); }
+  }
+}
+
+async function saveCurrentAd() {
+  const ad = state.currentAd;
+  if (!ad?.id) return;
+  try {
+    const updated = await api('ads.php', `action=update&id=${ad.id}`, 'PUT', { slides: ad.slides, bgColor: ad.bgColor, textColor: ad.textColor, accentColor: ad.accentColor, sizes: ad.sizes });
+    Object.assign(ad, updated);
+    const i = state.ads.findIndex(a => a.id === ad.id);
+    if (i !== -1) state.ads[i] = ad;
+    showToast('Anúncio salvo!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function regenAd() {
+  if (!state.gen.prompt) { openGenerator(); return; }
+  document.getElementById('gen-overlay').classList.add('show');
+  document.getElementById('gen-text').textContent = 'Gerando nova versão...';
+  try {
+    state.currentAd.slides = await generateAdWithAI();
+    state.currentSlide = 0;
+    renderCanvas();
+    renderPanelContent();
+    showToast('Nova versão gerada!');
+  } catch (e) { showToast(e.message, 'err'); }
+  finally { document.getElementById('gen-overlay').classList.remove('show'); }
+}
+
+async function exportAd(sizeKey) {
+  const sz = AD_SIZES[sizeKey] || AD_SIZES.feed;
+  const ad = state.currentAd;
+  const slide = ad.slides?.[state.currentSlide] || {};
+  const tmp = document.createElement('div');
+  tmp.style.cssText = `position:fixed;left:-9999px;top:0;width:${sz.w}px;height:${sz.h}px;overflow:hidden;font-family:'Syne',sans-serif`;
+  tmp.innerHTML = `<div style="position:relative;width:100%;height:100%;background:${ad.bgColor || '#1e2024'};display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end">
+    <div style="position:absolute;top:28px;right:28px;font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:${ad.accentColor || '#d4f24a'}">${state.currentProject?.logo || ''}</div>
+    <div style="position:relative;z-index:1;padding:${Math.round(sz.h * 0.05)}px">
+      ${slide.tag ? `<div style="font-size:14px;font-weight:500;padding:6px 14px;border-radius:20px;background:${ad.accentColor}22;color:${ad.accentColor};display:inline-block;margin-bottom:18px">${slide.tag}</div>` : ''}
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:${Math.floor(sz.h * 0.065)}px;line-height:1.1;color:${ad.textColor || '#fff'};margin-bottom:16px">${slide.headline || ''}</div>
+      ${slide.body ? `<div style="font-family:'DM Sans',sans-serif;font-weight:300;font-size:${Math.floor(sz.h * 0.022)}px;line-height:1.5;color:${ad.textColor || '#fff'};opacity:.85;margin-bottom:24px">${slide.body}</div>` : ''}
+      ${slide.cta ? `<div style="font-family:'DM Sans',sans-serif;font-weight:500;font-size:${Math.floor(sz.h * 0.018)}px;padding:14px 28px;border-radius:8px;background:${ad.accentColor || '#d4f24a'};color:#0e0f11;display:inline-block">${slide.cta}</div>` : ''}
+    </div>
+  </div>`;
+  document.body.appendChild(tmp);
+  try {
+    const c = await html2canvas(tmp, { scale: 1, useCORS: true, allowTaint: true, width: sz.w, height: sz.h, logging: false });
+    const a = document.createElement('a');
+    a.download = `${ad.name || 'anuncio'}-slide${state.currentSlide + 1}-${sizeKey}.png`;
+    a.href = c.toDataURL('image/png');
+    a.click();
+  } catch (e) { showToast('Erro ao exportar: ' + e.message, 'err'); }
+  finally { document.body.removeChild(tmp); }
+}
+
+async function exportAllSlides() {
+  const total = state.currentAd.slides?.length || 1;
+  for (let i = 0; i < total; i++) {
+    state.currentSlide = i;
+    renderCanvas();
+    await new Promise(r => setTimeout(r, 80));
+    await exportAd(state.currentAd.sizes?.[0] || 'feed');
+    await new Promise(r => setTimeout(r, 200));
+  }
+  state.currentSlide = 0;
+  renderCanvas();
+}
+
+function renderApprovalActions() {
+  const ad = state.currentAd;
+  if (!ad?.id) return '';
+  const role = state.user?.role;
+  let html = `<div class="panel-section"><div class="panel-section-title">Status</div>
+    <div style="margin-bottom:12px"><span class="ad-status ad-status-${ad.status}">${statusName(ad.status)}</span></div>`;
+  if (ad.status === 'draft' && ['admin', 'editor'].includes(role))
+    html += `<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="setAdStatus('review')">Enviar para revisão</button>`;
+  if (ad.status === 'review' && ['admin', 'approver'].includes(role))
+    html += `<div style="display:flex;gap:6px;margin-top:8px">
+      <button class="btn btn-danger btn-sm" style="flex:1;justify-content:center" onclick="openRejectModal()">Rejeitar</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="setAdStatus('approved')">Aprovar</button>
+    </div>`;
+  if (['approved', 'rejected'].includes(ad.status) && ['admin', 'editor'].includes(role))
+    html += `<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="setAdStatus('draft')">Voltar para rascunho</button>`;
+  if (ad.rejectionReason)
+    html += `<div style="font-size:11px;color:var(--red);background:rgba(255,90,90,.08);border-radius:8px;padding:8px 10px;margin-top:8px">Motivo: ${ad.rejectionReason}</div>`;
+  return html + '</div>';
+}
+
+let _rejectingAdId = null;
+function openRejectModal() { _rejectingAdId = state.currentAd?.id; document.getElementById('reject-reason').value = ''; openModal('modal-reject'); }
+
+async function confirmReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  if (!reason) { showToast('Informe o motivo da rejeição.', 'err'); return; }
+  try {
+    await api('ads.php', `action=status&id=${_rejectingAdId}`, 'PATCH', { status: 'rejected', rejection_reason: reason });
+    closeModal('modal-reject');
+    const ad = state.ads.find(a => a.id === _rejectingAdId);
+    if (ad) { ad.status = 'rejected'; ad.rejectionReason = reason; }
+    if (state.currentAd?.id === _rejectingAdId) { state.currentAd.status = 'rejected'; state.currentAd.rejectionReason = reason; }
+    renderPanelContent();
+    showToast('Anúncio rejeitado.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function setAdStatus(newStatus) {
+  const ad = state.currentAd;
+  if (!ad?.id) return;
+  try {
+    const updated = await api('ads.php', `action=status&id=${ad.id}`, 'PATCH', { status: newStatus });
+    Object.assign(ad, updated);
+    const i = state.ads.findIndex(a => a.id === ad.id);
+    if (i !== -1) state.ads[i] = ad;
+    renderPanelContent();
+    showToast(statusName(newStatus));
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BRAIN
+// ══════════════════════════════════════════════════════════════
+async function openBrain() {
+  if (!state.currentProject) return;
+  document.getElementById('brain-project-name').textContent = state.currentProject.name;
+  showView('brain');
+  await loadBrain();
+}
+
+async function loadBrain() {
+  try {
+    state.brain = await api('brain.php', `action=get&project_id=${state.currentProject.id}`);
+    renderContextBlocks();
+    renderVoice();
+    renderReferences();
+    renderLearnings();
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+function switchBrainTab(tab) {
+  ['context', 'voice', 'references', 'learnings'].forEach(t => {
+    document.getElementById(`btab-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`btab-content-${t}`).style.display = t === tab ? '' : 'none';
+  });
+}
+
+function openAddContext() { document.getElementById('ctx-content').value = ''; openModal('modal-add-context'); }
+
+async function saveContext() {
+  const content = document.getElementById('ctx-content').value.trim();
+  if (!content) { showToast('Conteúdo é obrigatório.', 'err'); return; }
+  try {
+    const ctx = await api('brain.php', 'action=add_context', 'POST', { project_id: state.currentProject.id, type: document.getElementById('ctx-type').value, content });
+    state.brain.contexts.unshift(ctx);
+    renderContextBlocks();
+    closeModal('modal-add-context');
+    showToast('Contexto adicionado!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function deleteContext(id) {
+  if (!confirm('Remover este bloco de contexto?')) return;
+  try {
+    await api('brain.php', `action=delete_context&id=${id}`, 'DELETE');
+    state.brain.contexts = state.brain.contexts.filter(c => c.id !== id);
+    renderContextBlocks();
+    showToast('Contexto removido.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+const CTX_LABELS = { positioning: 'Posicionamento', audience: 'Público', product: 'Produto', campaign: 'Campanha', restriction: 'Restrição', other: 'Outro' };
+
+function renderContextBlocks() {
+  const list = document.getElementById('context-blocks-list');
+  if (!state.brain.contexts?.length) {
+    list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg><p>Nenhum contexto adicionado ainda.</p></div>`;
+    return;
+  }
+  list.innerHTML = state.brain.contexts.map(c => `<div class="context-block">
+    <div class="context-block-header">
+      <span class="context-type-badge">${CTX_LABELS[c.type] || c.type}</span>
+      <span class="context-block-date">${fmtDate(c.created_at)}</span>
+    </div>
+    <div class="context-block-text">${c.content}</div>
+    <div class="context-block-actions"><button class="btn btn-danger btn-sm" onclick="deleteContext(${c.id})">Remover</button></div>
+  </div>`).join('');
+}
+
+const REF_ICONS = { competitor: '⚔️', inspiration: '✨', campaign: '📢', brand: '🏷️', other: '📎' };
+
+function openAddReference() {
+  state.refUpload = null;
+  document.getElementById('ref-type').value = 'inspiration';
+  document.getElementById('ref-desc').value = '';
+  document.getElementById('ref-image-preview').style.display = 'none';
+  document.getElementById('ref-upload-placeholder').style.display = '';
+  document.getElementById('ref-upload-area').classList.remove('has-image');
+  document.getElementById('ref-image-input').value = '';
+  openModal('modal-add-reference');
+}
+
+async function handleRefImageUpload(input) {
+  const file = input.files?.[0];
+  if (!file || !state.currentProject) return;
+  const btn = document.getElementById('btn-save-ref');
+  btn.disabled = true;
+  try {
+    const result = await apiUpload(file, state.currentProject.id);
+    state.refUpload = { path: result.path, mime: result.mime };
+    const prev = document.getElementById('ref-image-preview');
+    prev.src = result.url;
+    prev.style.display = 'block';
+    document.getElementById('ref-upload-placeholder').style.display = 'none';
+    document.getElementById('ref-upload-area').classList.add('has-image');
+    showToast('Imagem carregada!');
+  } catch (e) { showToast(e.message, 'err'); }
+  finally { btn.disabled = false; }
+}
+
+async function saveReference() {
+  const desc = document.getElementById('ref-desc').value.trim();
+  if (!desc) { showToast('Descrição é obrigatória.', 'err'); return; }
+  const btn = document.getElementById('btn-save-ref');
+  btn.disabled = true;
+  try {
+    const ref = await api('brain.php', 'action=add_reference', 'POST', {
+      project_id: state.currentProject.id,
+      type: document.getElementById('ref-type').value,
+      description: desc,
+      image_path: state.refUpload?.path || null,
+      image_mime: state.refUpload?.mime || null,
+    });
+    state.brain.references.unshift(ref);
+    renderReferences();
+    closeModal('modal-add-reference');
+    showToast('Referência adicionada!');
+  } catch (e) { showToast(e.message, 'err'); }
+  finally { btn.disabled = false; }
+}
+
+async function deleteReference(id) {
+  if (!confirm('Remover esta referência?')) return;
+  try {
+    await api('brain.php', `action=delete_reference&id=${id}`, 'DELETE');
+    state.brain.references = state.brain.references.filter(r => r.id !== id);
+    renderReferences();
+    showToast('Referência removida.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+function renderReferences() {
+  const list = document.getElementById('references-list');
+  if (!state.brain.references?.length) {
+    list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg><p>Nenhuma referência visual adicionada.</p></div>`;
+    return;
+  }
+  list.innerHTML = state.brain.references.map(r => `<div class="reference-card">
+    ${r.imageUrl ? `<img src="${r.imageUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">` : `<div class="ref-type-icon">${REF_ICONS[r.type] || '📎'}</div>`}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${r.type}</div>
+      <div style="font-size:13px;line-height:1.5">${r.description}</div>
+      <div style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="deleteReference(${r.id})">Remover</button></div>
+    </div>
+  </div>`).join('');
+}
+
+function renderVoice() {
+  const el = document.getElementById('voice-content');
+  const v = state.brain.voice;
+  if (!v) { el.innerHTML = `<div class="empty-state"><p>Tom de voz não gerado. Use "Gerar com IA" ou adicione aprendizados manualmente.</p></div>`; return; }
+  el.innerHTML = `
+    ${v.personality ? `<div class="voice-section"><div class="voice-section-title">Personalidade</div><div style="font-size:13px">${v.personality}</div></div>` : ''}
+    ${v.structure ? `<div class="voice-section"><div class="voice-section-title">Estrutura</div><div style="font-size:13px">${v.structure}</div></div>` : ''}
+    ${v.visualStyle ? `<div class="voice-section"><div class="voice-section-title">Estilo visual</div><div style="font-size:13px">${v.visualStyle}</div></div>` : ''}
+    ${v.useWords?.length ? `<div class="voice-section"><div class="voice-section-title">Palavras a usar</div><div class="voice-chips">${v.useWords.map(w => `<span class="voice-chip-use">${w}</span>`).join('')}</div></div>` : ''}
+    ${v.avoidWords?.length ? `<div class="voice-section"><div class="voice-section-title">Palavras a evitar</div><div class="voice-chips">${v.avoidWords.map(w => `<span class="voice-chip-avoid">${w}</span>`).join('')}</div></div>` : ''}
+    ${v.examples?.length ? `<div class="voice-section"><div class="voice-section-title">Exemplos</div>${v.examples.map(ex => `<div style="font-size:12px;color:var(--text2);font-style:italic;margin-bottom:6px">"${ex}"</div>`).join('')}</div>` : ''}`;
+}
+
+async function _callAI(prompt) {
+  const s = state.aiSettings;
+  const entry = Object.entries(s).find(([, v]) => v.enabled && v.has_key && v.api_key);
+  if (!entry) throw new Error('Nenhum provedor de IA configurado.');
+  const [provider, cfg] = entry;
+  const key = cfg.api_key;
+  const model = cfg.enabled_models?.[0] || PROVIDER_MODELS[provider]?.[0];
+  let content = '';
+  if (provider === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-use': 'true' },
+      body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const d = await r.json(); content = d.content?.[0]?.text || '';
+  } else if (provider === 'openai' || provider === 'groq') {
+    const url = provider === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+    const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 1024 }) });
+    const d = await r.json(); content = d.choices?.[0]?.message?.content || '';
+  } else if (provider === 'google') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 1024 } }) });
+    const d = await r.json(); content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  return content;
+}
+
+async function synthesizeVoice() {
+  const approved = state.ads.filter(a => a.status === 'approved');
+  if (!approved.length) { showToast('Nenhum anúncio aprovado para sintetizar.', 'err'); return; }
+  showToast('Sintetizando tom de voz...');
+  const samples = approved.slice(0, 5).map(a => a.slides.map(s => `Headline: ${s.headline}\nBody: ${s.body}`).join('\n')).join('\n---\n');
+  const prompt = `Analise estes anúncios aprovados e extraia o tom de voz da marca:\n\n${samples}\n\nResponda SOMENTE com JSON:\n{"personality":"...","useWords":["..."],"avoidWords":["..."],"structure":"...","visualStyle":"...","examples":["..."]}`;
+  try {
+    const content = await _callAI(prompt);
+    const m = content.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Resposta inválida');
+    const voice = JSON.parse(m[0]);
+    await api('brain.php', 'action=save_voice', 'POST', { project_id: state.currentProject.id, ...voice });
+    state.brain.voice = voice;
+    renderVoice();
+    showToast('Tom de voz sintetizado!');
+  } catch (e) { showToast('Erro: ' + e.message, 'err'); }
+}
+
+function renderLearnings() {
+  const el = document.getElementById('learnings-content');
+  const ls = state.brain.learnings || [];
+  const SRC = { rejection: '❌ Rejeição', approval: '✅ Aprovação', manual: '✏️ Manual' };
+  if (!ls.length) {
+    el.innerHTML = `<div class="empty-state"><p>Aprendizados são gerados automaticamente ao aprovar/rejeitar anúncios.</p></div>`;
+  } else {
+    el.innerHTML = ls.map(l => `<div class="learning-card">
+      <div>${l.text}</div>
+      ${l.ad_name ? `<div class="learning-source">${SRC[l.source] || l.source} — ${l.ad_name} · ${fmtDate(l.created_at)}</div>` : ''}
+    </div>`).join('');
+  }
+  el.innerHTML += `<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="promptAddLearning()">+ Adicionar aprendizado manual</button></div>`;
+}
+
+function promptAddLearning() {
+  const text = window.prompt('Aprendizado:');
+  if (!text?.trim()) return;
+  api('brain.php', 'action=add_learning', 'POST', { project_id: state.currentProject.id, text: text.trim() })
+    .then(() => loadBrain())
+    .catch(e => showToast(e.message, 'err'));
+}
+
+async function synthesizeBrain() {
+  showToast('Sintetizando cérebro com IA...');
+  const ctx = buildBrainContext();
+  const prompt = `Com base no contexto da marca abaixo, crie um resumo executivo em português para guiar a criação de anúncios:\n\nProjeto: ${state.currentProject?.name}\n${ctx}\n\nResponda com 3-5 bullet points práticos.`;
+  try {
+    const content = await _callAI(prompt);
+    showToast(content.slice(0, 120) + (content.length > 120 ? '…' : ''));
+  } catch (e) { showToast('Erro: ' + e.message, 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════════
+async function showSettingsView() {
+  if (state.user?.role !== 'admin') return;
+  await Promise.all([loadUsers(), loadAiSettings()]);
+  renderAssignmentsSelect();
+}
+
+function switchSettingsTab(tab) {
+  ['users', 'assignments', 'ai'].forEach(t => {
+    document.getElementById(`stab-${t}`)?.classList.toggle('active', t === tab);
+    document.getElementById(`stab-content-${t}`).style.display = t === tab ? '' : 'none';
+  });
+}
+
+async function loadUsers() {
+  try { state.users = await api('users.php', 'action=list'); renderUsersTable(); }
+  catch (e) { showToast(e.message, 'err'); }
+}
+
+function renderUsersTable() {
+  const wrap = document.getElementById('users-table-wrap');
+  const active = state.users.filter(u => u.status === 'active').length;
+  document.getElementById('users-summary').textContent = `${state.users.length} usuário${state.users.length !== 1 ? 's' : ''} · ${active} ativo${active !== 1 ? 's' : ''}`;
+  if (!state.users.length) { wrap.innerHTML = '<div class="empty-state"><p>Nenhum usuário cadastrado.</p></div>'; return; }
+  wrap.innerHTML = `<table class="users-table">
+    <thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Projetos</th><th></th></tr></thead>
+    <tbody>${state.users.map(u => `<tr>
+      <td style="display:flex;align-items:center;gap:10px">
+        <div class="user-avatar-sm" style="background:linear-gradient(135deg,var(--accent),#7fff6a)">${u.initials || initials(u.name)}</div>
+        <div><div style="font-weight:500">${u.name}</div><div style="font-size:11px;color:var(--text3)">${u.email}</div></div>
+      </td>
+      <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
+      <td><span class="status-dot status-${u.status}"></span>${{ active: 'Ativo', inactive: 'Inativo', pending: 'Pendente' }[u.status] || u.status}</td>
+      <td style="color:var(--text2)">${u.assignments_count || 0}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openEditUser(${u.id})">Editar</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function openInviteModal() {
+  document.getElementById('invite-name').value = '';
+  document.getElementById('invite-email').value = '';
+  document.getElementById('invite-role').value = 'editor';
+  openModal('modal-invite');
+}
+
+async function inviteUser() {
+  const name = document.getElementById('invite-name').value.trim();
+  const email = document.getElementById('invite-email').value.trim();
+  const role = document.getElementById('invite-role').value;
+  if (!name || !email) { showToast('Nome e e-mail são obrigatórios.', 'err'); return; }
+  try {
+    const result = await api('auth.php', 'action=send_invite', 'POST', { name, email, role });
+    closeModal('modal-invite');
+    document.getElementById('invite-url-text').textContent = result.invite_url;
+    openModal('modal-invite-url');
+    await loadUsers();
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+function copyInviteUrl() {
+  navigator.clipboard.writeText(document.getElementById('invite-url-text').textContent)
+    .then(() => showToast('Link copiado!'));
+}
+
+function openEditUser(id) {
+  state.editingUserId = id;
+  const u = state.users.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('edit-user-name').value = u.name;
+  document.getElementById('edit-user-role').value = u.role;
+  document.getElementById('edit-user-status').value = u.status;
+  openModal('modal-edit-user');
+}
+
+async function saveEditUser() {
+  try {
+    await api('users.php', `action=update&id=${state.editingUserId}`, 'PUT', {
+      name: document.getElementById('edit-user-name').value.trim(),
+      role: document.getElementById('edit-user-role').value,
+      status: document.getElementById('edit-user-status').value,
+    });
+    closeModal('modal-edit-user');
+    await loadUsers();
+    showToast('Usuário atualizado!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function removeUser() {
+  if (!confirm('Remover este usuário permanentemente?')) return;
+  try {
+    await api('users.php', `action=delete&id=${state.editingUserId}`, 'DELETE');
+    closeModal('modal-edit-user');
+    await loadUsers();
+    showToast('Usuário removido.');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function loadAiSettings() {
+  try { state.aiSettings = await api('settings.php', 'action=get'); renderAiSettings(); }
+  catch (_) {}
+}
+
+const AI_META = {
+  anthropic: { name: 'Anthropic Claude', logo: 'A', color: '#d4854a' },
+  openai:    { name: 'OpenAI GPT',       logo: 'G', color: '#10a37f' },
+  google:    { name: 'Google Gemini',    logo: 'G', color: '#4285f4' },
+  groq:      { name: 'Groq (rápido)',    logo: 'Q', color: '#f55036' },
+};
+
+function renderAiSettings() {
+  const container = document.getElementById('ai-provider-cards');
+  let html = '';
+  for (const [id, meta] of Object.entries(AI_META)) {
+    const cfg = state.aiSettings[id] || { enabled: false, has_key: false, enabled_models: [] };
+    const models = PROVIDER_MODELS[id] || [];
+    const enabled = cfg.enabled_models?.length ? cfg.enabled_models : [];
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="ai-provider-logo" style="background:${meta.color}22;color:${meta.color}">${meta.logo}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:14px">${meta.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${cfg.has_key ? '🔑 Chave configurada' : '⚠️ Sem chave'}</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">
+          <input type="checkbox" ${cfg.enabled ? 'checked' : ''} onchange="toggleProvider('${id}',this.checked)"> Ativo
+        </label>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">Chave de API</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input" id="key-${id}" type="password" placeholder="${cfg.has_key ? '(chave salva)' : 'sk-...'}" value="${cfg.api_key || ''}">
+          <button class="btn btn-ghost btn-sm" onclick="saveProviderKey('${id}')">Salvar</button>
+        </div>
+      </div>
+      <div><div class="form-label" style="margin-bottom:8px">Modelos habilitados</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${models.map(m => `<label class="size-chip ${enabled.includes(m) ? 'selected' : ''}" style="cursor:pointer">
+            <input type="checkbox" style="display:none" ${enabled.includes(m) ? 'checked' : ''} onchange="toggleModel('${id}','${m}',this.checked)">${m}
+          </label>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+async function toggleProvider(id, enabled) {
+  try {
+    await api('settings.php', 'action=save', 'POST', { provider: id, enabled });
+    if (!state.aiSettings[id]) state.aiSettings[id] = {};
+    state.aiSettings[id].enabled = enabled;
+  } catch (e) { showToast(e.message, 'err'); renderAiSettings(); }
+}
+
+async function saveProviderKey(id) {
+  const key = document.getElementById(`key-${id}`).value.trim();
+  try {
+    await api('settings.php', 'action=save', 'POST', { provider: id, api_key: key });
+    if (!state.aiSettings[id]) state.aiSettings[id] = {};
+    state.aiSettings[id].has_key = !!key;
+    if (key) state.aiSettings[id].api_key = key;
+    renderAiSettings();
+    showToast('Chave salva!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function toggleModel(provider, model, checked) {
+  const cfg = state.aiSettings[provider] || {};
+  let models = [...(cfg.enabled_models || [])];
+  if (checked && !models.includes(model)) models.push(model);
+  else if (!checked) models = models.filter(m => m !== model);
+  if (!models.length) { showToast('Habilite ao menos 1 modelo.', 'err'); renderAiSettings(); return; }
+  try {
+    await api('settings.php', 'action=save', 'POST', { provider, enabled_models: models });
+    if (!state.aiSettings[provider]) state.aiSettings[provider] = {};
+    state.aiSettings[provider].enabled_models = models;
+  } catch (e) { showToast(e.message, 'err'); renderAiSettings(); }
+}
+
+async function renderAssignmentsSelect() {
+  if (!state.projects.length) await loadProjects();
+  const sel = document.getElementById('assign-project-select');
+  sel.innerHTML = state.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  renderAssignments();
+}
+
+async function renderAssignments() {
+  const projectId = parseInt(document.getElementById('assign-project-select')?.value);
+  if (!projectId) return;
+  try {
+    const rows = await api('users.php', `action=assignments&project_id=${projectId}`);
+    const ROLES = ['none', 'viewer', 'editor', 'approver', 'admin'];
+    document.getElementById('assignments-table-wrap').innerHTML = `<table class="assign-table">
+      <thead><tr><th>Usuário</th><th>Perfil global</th><th>Acesso no projeto</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td style="display:flex;align-items:center;gap:10px">
+          <div class="user-avatar-sm" style="background:linear-gradient(135deg,var(--accent),#7fff6a)">${r.initials || initials(r.name)}</div>
+          <div><div style="font-weight:500">${r.name}</div><div style="font-size:11px;color:var(--text3)">${r.email}</div></div>
+        </td>
+        <td><span class="role-badge role-${r.global_role}">${roleName(r.global_role)}</span></td>
+        <td><select class="assign-select" onchange="updateAssignment(${r.id},${projectId},this.value)">
+          ${ROLES.map(ro => `<option value="${ro}" ${r.project_role === ro ? 'selected' : ''}>${roleName(ro)}</option>`).join('')}
+        </select></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function updateAssignment(userId, projectId, role) {
+  try {
+    await api('users.php', 'action=assign', 'POST', { user_id: userId, project_id: projectId, role });
+    showToast('Atribuição salva.');
+  } catch (e) { showToast(e.message, 'err'); renderAssignments(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${name}`)?.classList.add('active');
+  const titles = { projects: 'Projetos', ads: state.currentProject?.name || 'Anúncios', brain: 'Cérebro do Projeto', editor: state.currentAd?.name || 'Editor', settings: 'Configurações' };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+  ['projects', 'settings'].forEach(n => document.getElementById(`nav-${n}`)?.classList.toggle('active', n === name));
+  if (name !== 'editor') document.getElementById('topbar-actions').innerHTML = '';
+  if (name === 'settings') showSettingsView();
+  if (name === 'projects') renderSidebarProjects();
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
