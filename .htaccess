@@ -1,7 +1,9 @@
 Options -Indexes
+DirectoryIndex index.html index.php
 AddDefaultCharset UTF-8
 
-# Redireciona para HTTPS
+# Redireciona para HTTPS (compatível com proxy/LiteSpeed)
 RewriteEngine On
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
