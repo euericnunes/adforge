@@ -72,6 +72,12 @@ function handle_update(): void {
         $fields[] = 'role = ?';
         $params[] = $data['role'];
     }
+    if (isset($data['password']) && strlen($data['password']) >= 8) {
+        $fields[] = 'password = ?';
+        $params[] = password_hash($data['password'], PASSWORD_BCRYPT);
+    } elseif (isset($data['password']) && $data['password'] !== '') {
+        json_error('A senha deve ter no mínimo 8 caracteres.');
+    }
     if (isset($data['status']) && in_array($data['status'], ['active','inactive'], true)) {
         // Não desativa o próprio usuário nem o último admin
         if ($data['status'] === 'inactive' && $userId === (int) $me['id']) {

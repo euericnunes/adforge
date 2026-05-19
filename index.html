@@ -565,6 +565,7 @@
         <option value="active">Ativo</option><option value="inactive">Inativo</option>
       </select>
     </div>
+    <div class="form-group"><label class="form-label">Nova senha <span style="font-weight:400;opacity:.6">(deixe em branco para não alterar)</span></label><input class="form-input" id="edit-user-password" type="password" placeholder="••••••••" autocomplete="new-password"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancelar</button>
       <button class="btn btn-danger btn-sm" onclick="removeUser()">Remover</button>
@@ -1949,16 +1950,20 @@ function openEditUser(id) {
   document.getElementById('edit-user-name').value = u.name;
   document.getElementById('edit-user-role').value = u.role;
   document.getElementById('edit-user-status').value = u.status;
+  document.getElementById('edit-user-password').value = '';
   openModal('modal-edit-user');
 }
 
 async function saveEditUser() {
   try {
-    await api('users.php', `action=update&id=${state.editingUserId}`, 'PUT', {
+    const body = {
       name: document.getElementById('edit-user-name').value.trim(),
       role: document.getElementById('edit-user-role').value,
       status: document.getElementById('edit-user-status').value,
-    });
+    };
+    const pw = document.getElementById('edit-user-password').value;
+    if (pw) body.password = pw;
+    await api('users.php', `action=update&id=${state.editingUserId}`, 'PUT', body);
     closeModal('modal-edit-user');
     await loadUsers();
     showToast('Usuário atualizado!');
