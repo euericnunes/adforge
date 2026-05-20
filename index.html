@@ -164,6 +164,10 @@
   .ad-canvas .ad-body { font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.5; margin-bottom: 16px; opacity: 0.85; }
   .ad-canvas .ad-cta { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 13px; padding: 10px 20px; border-radius: 8px; display: inline-block; }
   .ad-canvas .ad-logo { position: absolute; top: 16px; right: 16px; z-index: 2; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800; opacity: 0.9; }
+  .ad-canvas [contenteditable] { outline: none; cursor: text; border-radius: 3px; transition: box-shadow 0.15s; }
+  .ad-canvas [contenteditable]:hover { box-shadow: 0 0 0 2px rgba(255,255,255,0.15); }
+  .ad-canvas [contenteditable]:focus { box-shadow: 0 0 0 2px rgba(212,242,74,0.6); }
+  .ad-canvas [contenteditable]:empty::before { content: attr(data-ph); opacity: 0.35; pointer-events: none; }
   .carousel-nav { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
   .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); cursor: pointer; transition: all 0.15s; }
   .carousel-dot.active { background: var(--accent); width: 18px; border-radius: 3px; }
@@ -1285,6 +1289,9 @@ async function startGeneration() {
   if (!prompt) { showToast('Descreva o que deseja anunciar.', 'err'); return; }
   if (!state.gen.provider) { showToast('Selecione um provedor de IA.', 'err'); return; }
   state.gen.prompt = prompt;
+  if (!state.brain.contexts?.length && !state.brain.voice) {
+    try { state.brain = await api('brain.php', `action=get&project_id=${state.currentProject.id}`); } catch (_) {}
+  }
   const sizes = [];
   document.querySelectorAll('#gform-3 .size-chip.selected[data-size]').forEach(el => sizes.push(el.dataset.size));
   state.gen.sizes = sizes.length ? sizes : ['feed'];
@@ -1343,17 +1350,29 @@ async function generateAdWithAI() {
   const { provider, model, type, slides: numSlides, objective, prompt } = state.gen;
   const brain = buildBrainContext();
   const p = state.currentProject;
-  const SYSTEM = `Você é especialista em copywriting para redes sociais. Responda SOMENTE com JSON válido, sem texto extra.`;
-  const USER = `Crie um anúncio ${type === 'carousel' ? `carrossel com ${numSlides} slides` : 'de imagem única'}.
+  const SYSTEM = `Você é especialista em marketing digital e copywriting para redes sociais. Cria anúncios persuasivos, diretos e alinhados com a identidade da marca. Responda SOMENTE com JSON válido, sem texto extra, sem markdown.`;
+  const USER = `Crie um anúncio ${type === 'carousel' ? `carrossel com ${numSlides} slides` : 'de imagem única'} para a marca abaixo.
 
+== IDENTIDADE DA MARCA ==
 Projeto: ${p?.name || ''}
-Contexto: ${p?.context || ''}
-${brain ? `Contexto de marca:\n${brain}\n` : ''}Objetivo: ${objective}
+${p?.context ? `Contexto: ${p.context}` : ''}
+${brain ? `\n== INTELIGÊNCIA DE MARCA (CÉREBRO) ==\n${brain}` : ''}
+
+== BRIEFING ==
+Objetivo: ${objective}
 O que anunciar: ${prompt}
 
-Retorne SOMENTE este JSON:
-{"slides":[{"headline":"Título (máx 60 chars)","body":"Texto (máx 120 chars)","cta":"CTA (máx 25 chars)","tag":"Tag opcional (máx 20 chars)"}]}
-${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. Primeiro: gancho. Meio: desenvolvimento. Último: CTA forte.`}`;
+== REGRAS ==
+- headline: máx 60 chars, impactante e direto ao ponto
+- body: máx 120 chars, suporte ao headline com benefício claro
+- cta: máx 25 chars, ação objetiva (ex: "Saiba Mais", "Garanta Agora")
+- tag: máx 20 chars, categoria ou destaque — pode ser vazio
+- Use o tom, vocabulário e persona da marca quando disponíveis no Cérebro
+- NÃO use palavras marcadas como "evitar"
+
+Retorne SOMENTE este JSON (sem comentários):
+{"slides":[{"headline":"","body":"","cta":"","tag":""}]}
+${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. Slide 1: gancho forte. Slides intermediários: desenvolvimento/prova social. Último slide: CTA claro.`}`;
 
   const cfg = state.aiSettings;
   const key = cfg[provider]?.api_key;
@@ -1423,11 +1442,15 @@ function buildBrainContext() {
   let out = '';
   if (b.contexts?.length) out += b.contexts.map(c => `[${c.type}] ${c.content}`).join('\n') + '\n';
   if (b.voice?.personality) {
-    out += `\nTom: ${b.voice.personality}`;
-    if (b.voice.useWords?.length) out += `\nUsar: ${b.voice.useWords.join(', ')}`;
-    if (b.voice.avoidWords?.length) out += `\nEvitar: ${b.voice.avoidWords.join(', ')}`;
+    out += `\nTom de voz: ${b.voice.personality}`;
+    if (b.voice.useWords?.length) out += `\nPalavras para usar: ${b.voice.useWords.join(', ')}`;
+    if (b.voice.avoidWords?.length) out += `\nPalavras para evitar: ${b.voice.avoidWords.join(', ')}`;
   }
-  if (b.learnings?.length) out += '\nAprendizados:\n' + b.learnings.slice(0, 5).map(l => `- ${l.text}`).join('\n');
+  if (b.references?.length) {
+    const descs = b.references.filter(r => r.description).slice(0, 3).map(r => `- ${r.description}`);
+    if (descs.length) out += '\nReferências visuais/criativas:\n' + descs.join('\n');
+  }
+  if (b.learnings?.length) out += '\nAprendizados com anúncios anteriores:\n' + b.learnings.slice(0, 5).map(l => `- ${l.text}`).join('\n');
   return out.trim();
 }
 
@@ -1477,15 +1500,28 @@ function renderCanvas() {
   const canvas = document.getElementById('ad-canvas');
   const nav = document.getElementById('carousel-nav');
   canvas.style.cssText = `width:${dw}px;height:${dh}px;background:${ad.bgColor || '#1e2024'}`;
+  const canEdit = ['admin', 'editor'].includes(state.user?.role);
+  const ce = canEdit ? 'contenteditable="true"' : '';
   canvas.innerHTML = `
     <div class="ad-bg" style="background:${ad.bgColor || '#1e2024'}"></div>
     <div class="ad-logo" style="color:${ad.accentColor || '#d4f24a'};font-size:${Math.max(10, 13 * scale)}px">${state.currentProject?.logo || ''}</div>
     <div class="ad-content">
-      ${slide.tag ? `<div class="ad-tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px">${slide.tag}</div>` : ''}
-      <div class="ad-headline" style="color:${ad.textColor || '#fff'};font-size:${hSize}px">${slide.headline || ''}</div>
-      ${slide.body ? `<div class="ad-body" style="color:${ad.textColor || '#fff'};font-size:${bSize}px">${slide.body}</div>` : ''}
-      ${slide.cta ? `<div class="ad-cta" style="background:${ad.accentColor || '#d4f24a'};color:#0e0f11;font-size:${Math.max(9, 13 * scale)}px">${slide.cta}</div>` : ''}
+      <div class="ad-tag" ${ce} data-field="tag" data-ph="+ Tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px;${slide.tag ? '' : 'opacity:0.4'}">${slide.tag || ''}</div>
+      <div class="ad-headline" ${ce} data-field="headline" data-ph="Headline" style="color:${ad.textColor || '#fff'};font-size:${hSize}px">${slide.headline || ''}</div>
+      <div class="ad-body" ${ce} data-field="body" data-ph="Texto de suporte" style="color:${ad.textColor || '#fff'};font-size:${bSize}px;${slide.body ? '' : 'opacity:0.4'}">${slide.body || ''}</div>
+      <div class="ad-cta" ${ce} data-field="cta" data-ph="CTA" style="background:${ad.accentColor || '#d4f24a'};color:#0e0f11;font-size:${Math.max(9, 13 * scale)}px;${slide.cta ? '' : 'opacity:0.5'}">${slide.cta || ''}</div>
     </div>`;
+  if (canEdit) {
+    canvas.querySelectorAll('[data-field]').forEach(el => {
+      el.addEventListener('input', () => {
+        if (!state.currentAd?.slides?.[state.currentSlide]) return;
+        const val = el.textContent.replace(/\n/g, ' ').trim();
+        state.currentAd.slides[state.currentSlide][el.dataset.field] = val;
+        el.style.opacity = val ? '' : '0.4';
+      });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    });
+  }
   if (ad.type === 'carousel' && ad.slides?.length > 1) {
     nav.style.display = '';
     nav.innerHTML = ad.slides.map((_, i) => `<div class="carousel-dot ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})"></div>`).join('');
@@ -1519,20 +1555,8 @@ function renderPanelContent() {
         </div>`).join('')}
       </div></div>`;
     }
-    const escVal = v => (v || '').replace(/"/g, '&quot;');
     body.innerHTML = `${slidesHtml}
-      <div class="panel-section"><div class="panel-section-title">Slide ${state.currentSlide + 1}</div>
-        ${canEdit ? `
-          <div class="form-group"><label class="form-label">Tag</label><input class="form-input" value="${escVal(slide.tag)}" oninput="updateSlide('tag',this.value)" placeholder="Ex: Oferta"></div>
-          <div class="form-group"><label class="form-label">Headline *</label><textarea class="form-textarea" style="min-height:70px" oninput="updateSlide('headline',this.value)" placeholder="Título impactante">${slide.headline || ''}</textarea></div>
-          <div class="form-group"><label class="form-label">Corpo</label><textarea class="form-textarea" style="min-height:70px" oninput="updateSlide('body',this.value)" placeholder="Texto de suporte">${slide.body || ''}</textarea></div>
-          <div class="form-group"><label class="form-label">CTA</label><input class="form-input" value="${escVal(slide.cta)}" oninput="updateSlide('cta',this.value)" placeholder="Ex: Saiba Mais"></div>
-        ` : `
-          <div style="font-size:13px;font-weight:600">${slide.headline || ''}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:6px">${slide.body || ''}</div>
-          ${slide.cta ? `<div style="font-size:12px;margin-top:6px;color:var(--accent)">${slide.cta}</div>` : ''}
-        `}
-      </div>
+      ${canEdit ? `<div class="panel-section"><div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;flex-shrink:0"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>Clique em qualquer texto do anúncio para editar diretamente.</div></div>` : ''}
       ${ad.id ? renderApprovalActions() : ''}`;
 
   } else if (tab === 'design') {
