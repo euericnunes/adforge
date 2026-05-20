@@ -970,6 +970,7 @@ function showApp() {
   document.getElementById('user-role').textContent = roleName(u.role);
   document.getElementById('nav-settings').style.display = u.role === 'admin' ? '' : 'none';
   loadProjects();
+  history.replaceState({ view: 'projects' }, '', '#projects');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2185,7 +2186,7 @@ async function updateAssignment(userId, projectId, role) {
 // ══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
-function showView(name) {
+function showView(name, push = true) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${name}`)?.classList.add('active');
   const titles = { projects: 'Projetos', ads: state.currentProject?.name || 'Anúncios', brain: 'Cérebro do Projeto', editor: state.currentAd?.name || 'Editor', settings: 'Configurações' };
@@ -2194,7 +2195,13 @@ function showView(name) {
   if (name !== 'editor') document.getElementById('topbar-actions').innerHTML = '';
   if (name === 'settings') showSettingsView();
   if (name === 'projects') renderSidebarProjects();
+  if (push) history.pushState({ view: name }, '', '#' + name);
 }
+
+window.addEventListener('popstate', e => {
+  const v = e.state?.view;
+  if (v) showView(v, false);
+});
 
 // ══════════════════════════════════════════════════════════════
 // INIT
