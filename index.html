@@ -2023,9 +2023,7 @@ function renderAiSettings() {
       </div>
       <div><div class="form-label" style="margin-bottom:8px">Modelos habilitados</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${models.map(m => `<label class="size-chip ${enabled.includes(m) ? 'selected' : ''}" style="cursor:pointer">
-            <input type="checkbox" style="display:none" ${enabled.includes(m) ? 'checked' : ''} onchange="toggleModel('${id}','${m}',this.checked)">${m}
-          </label>`).join('')}
+          ${models.map(m => `<span class="size-chip ${enabled.includes(m) ? 'selected' : ''}" style="cursor:pointer" onclick="toggleModel('${id}','${m}',!${enabled.includes(m)})">${m}</span>`).join('')}
         </div>
       </div>
     </div>`;
