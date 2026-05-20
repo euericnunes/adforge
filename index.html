@@ -679,10 +679,10 @@
       <div class="gen-section">
         <div class="gen-section-title">Tamanhos para exportar</div>
         <div class="size-chips">
-          <div class="size-chip selected" data-size="feed">Feed 1:1 (1080×1080)</div>
-          <div class="size-chip" data-size="stories">Stories 9:16 (1080×1920)</div>
-          <div class="size-chip" data-size="landscape">Paisagem 16:9 (1280×720)</div>
-          <div class="size-chip" data-size="portrait">Retrato 4:5 (1080×1350)</div>
+          <div class="size-chip selected" data-size="feed" onclick="toggleSize(this)">Feed 1:1 (1080×1080)</div>
+          <div class="size-chip" data-size="stories" onclick="toggleSize(this)">Stories 9:16 (1080×1920)</div>
+          <div class="size-chip" data-size="landscape" onclick="toggleSize(this)">Paisagem 16:9 (1280×720)</div>
+          <div class="size-chip" data-size="portrait" onclick="toggleSize(this)">Retrato 4:5 (1080×1350)</div>
         </div>
       </div>
       <div class="gen-section">
@@ -848,6 +848,13 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
+
+function toggleSize(el) {
+  const chips = el.closest('.size-chips').querySelectorAll('[data-size]');
+  el.classList.toggle('selected');
+  const anySelected = [...chips].some(c => c.classList.contains('selected'));
+  if (!anySelected) el.classList.add('selected'); // garante ao menos 1
+}
 
 function togglePasswordVisibility() {
   const input = document.getElementById('login-password');
