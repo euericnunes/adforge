@@ -970,6 +970,7 @@ function showApp() {
   document.getElementById('user-role').textContent = roleName(u.role);
   document.getElementById('nav-settings').style.display = u.role === 'admin' ? '' : 'none';
   loadProjects();
+  loadAiSettings();
   history.replaceState({ view: 'projects' }, '', '#projects');
 }
 
