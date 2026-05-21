@@ -1352,6 +1352,7 @@ async function generateAdWithAI() {
   const { provider, model, type, slides: numSlides, objective, prompt } = state.gen;
   const brain = buildBrainContext();
   const p = state.currentProject;
+
   const SYSTEM = `Você é especialista em marketing digital e copywriting para redes sociais. Cria anúncios persuasivos, diretos e alinhados com a identidade da marca. Responda SOMENTE com JSON válido, sem texto extra, sem markdown.`;
   const USER = `Crie um anúncio ${type === 'carousel' ? `carrossel com ${numSlides} slides` : 'de imagem única'} para a marca abaixo.
 
@@ -1376,58 +1377,13 @@ Retorne SOMENTE este JSON (sem comentários):
 {"slides":[{"headline":"","body":"","cta":"","tag":""}]}
 ${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. Slide 1: gancho forte. Slides intermediários: desenvolvimento/prova social. Último slide: CTA claro.`}`;
 
-  const cfg = state.aiSettings;
-  const key = cfg[provider]?.api_key;
-  if (!key) throw new Error('Chave de API não configurada para ' + provider);
+  const result = await api('ai.php', '', 'POST', {
+    provider, model,
+    system_prompt: SYSTEM,
+    user_prompt: USER,
+  });
 
-  let content = '';
-
-  if (provider === 'anthropic') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-use': 'true',
-      },
-      body: JSON.stringify({ model, max_tokens: 1024, system: SYSTEM, messages: [{ role: 'user', content: USER }] }),
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Anthropic'); }
-    const d = await res.json();
-    content = d.content?.[0]?.text || '';
-
-  } else if (provider === 'openai') {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: USER }], max_tokens: 1024 }),
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro OpenAI'); }
-    const d = await res.json();
-    content = d.choices?.[0]?.message?.content || '';
-
-  } else if (provider === 'google') {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: SYSTEM + '\n\n' + USER }] }], generationConfig: { maxOutputTokens: 1024 } }),
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Google'); }
-    const d = await res.json();
-    content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  } else if (provider === 'groq') {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: USER }], max_tokens: 1024 }),
-    });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Erro Groq'); }
-    const d = await res.json();
-    content = d.choices?.[0]?.message?.content || '';
-  }
-
+  const content = result.content;
   const m = content.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Resposta da IA sem JSON válido');
   const parsed = JSON.parse(m[0]);

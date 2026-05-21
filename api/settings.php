@@ -33,14 +33,6 @@ function handle_get(): void {
             'enabled_models' => json_decode($r['enabled_models'] ?? '[]', true) ?: [],
             'has_key'        => !empty($r['api_key']),
         ];
-        // Admin vê a chave descriptografada; outros, apenas o flag has_key
-        if ($user['role'] === 'admin' && !empty($r['api_key'])) {
-            try {
-                $entry['api_key'] = decrypt_key($r['api_key']);
-            } catch (\Throwable) {
-                $entry['api_key'] = '';
-            }
-        }
         $result[$r['provider']] = $entry;
     }
 
