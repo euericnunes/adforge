@@ -46,7 +46,7 @@ function handle_save(): void {
     $data     = require_body('provider');
     $provider = $data['provider'];
 
-    $validProviders = ['anthropic', 'openai', 'google', 'groq'];
+    $validProviders = ['anthropic', 'openai', 'google', 'groq', 'deepseek', 'mistral'];
     if (!in_array($provider, $validProviders, true)) {
         json_error('Provedor inválido.');
     }

@@ -14,7 +14,7 @@ $model      = $data['model'];
 $system     = $data['system_prompt'] ?? '';
 $userPrompt = $data['user_prompt'];
 
-$validProviders = ['anthropic', 'openai', 'google', 'groq'];
+$validProviders = ['anthropic', 'openai', 'google', 'groq', 'deepseek', 'mistral'];
 if (!in_array($provider, $validProviders, true)) json_error('Provedor inválido.');
 
 $stmt = db()->prepare('SELECT api_key, enabled FROM ai_settings WHERE provider = ?');
@@ -45,10 +45,14 @@ if ($provider === 'anthropic') {
     if (isset($d['error'])) json_error($d['error']['message'] ?? 'Erro Anthropic');
     $content = $d['content'][0]['text'] ?? '';
 
-} elseif ($provider === 'openai' || $provider === 'groq') {
-    $url = $provider === 'openai'
-        ? 'https://api.openai.com/v1/chat/completions'
-        : 'https://api.groq.com/openai/v1/chat/completions';
+} elseif (in_array($provider, ['openai', 'groq', 'deepseek', 'mistral'], true)) {
+    $urls = [
+        'openai'   => 'https://api.openai.com/v1/chat/completions',
+        'groq'     => 'https://api.groq.com/openai/v1/chat/completions',
+        'deepseek' => 'https://api.deepseek.com/chat/completions',
+        'mistral'  => 'https://api.mistral.ai/v1/chat/completions',
+    ];
+    $url = $urls[$provider];
     $body = json_encode([
         'model'      => $model,
         'max_tokens' => 1024,
