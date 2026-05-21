@@ -1150,6 +1150,9 @@ function renderAdsGrid(ads) {
           <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();duplicateAd(${ad.id})" style="padding:3px 6px">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M2 11V3a2 2 0 0 1 2-2h8"/></svg>
           </button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteAd(${ad.id})" style="padding:3px 6px;color:var(--red)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><polyline points="3 4 13 4"/><path d="M5 4V2h6v2M6 7v5M10 7v5"/><rect x="3" y="4" width="10" height="10" rx="1"/></svg>
+          </button>
         </div>
       </div>
       <div class="ad-thumb-info">
@@ -1189,6 +1192,21 @@ async function duplicateAd(id) {
     state.ads.unshift(newAd);
     renderAdsGrid(filterAdsArr());
     showToast('Anúncio duplicado!');
+  } catch (e) { showToast(e.message, 'err'); }
+}
+
+async function deleteAd(id) {
+  if (!confirm('Excluir este anúncio? Esta ação não pode ser desfeita.')) return;
+  try {
+    await api('ads.php', `action=delete&id=${id}`, 'DELETE');
+    state.ads = state.ads.filter(a => a.id !== id);
+    if (state.currentAd?.id === id) {
+      state.currentAd = null;
+      showView('ads');
+    } else {
+      renderAdsGrid(filterAdsArr());
+    }
+    showToast('Anúncio excluído.');
   } catch (e) { showToast(e.message, 'err'); }
 }
 
@@ -1431,6 +1449,7 @@ function renderEditor() {
   document.getElementById('topbar-title').textContent = ad.name || 'Editor';
   document.getElementById('topbar-actions').innerHTML = `<div style="display:flex;gap:8px;align-items:center">
     ${ad.id ? `<button class="btn btn-ghost btn-sm" onclick="regenAd()">↻ Gerar novamente</button>` : ''}
+    ${ad.id ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteAd(${ad.id})">Excluir</button>` : ''}
     <button class="btn btn-primary btn-sm" onclick="saveCurrentAd()">Salvar</button>
   </div>`;
   renderCanvas();
