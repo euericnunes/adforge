@@ -65,8 +65,8 @@ function handle_create(): void {
     db()->prepare('
         INSERT INTO ads
           (project_id, name, type, objective, status, bg_color, text_color, accent_color,
-           slides, sizes, generated_by, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           bg_image, slides, sizes, generated_by, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ')->execute([
         $projectId,
         trim($data['name']),
@@ -76,6 +76,7 @@ function handle_create(): void {
         sanitize_color($data['bg_color'] ?? '#1e2024'),
         sanitize_color($data['text_color'] ?? '#ffffff'),
         sanitize_color($data['accent_color'] ?? '#d4f24a'),
+        $data['bgImage'] ?? null,
         json_encode($slides, JSON_UNESCAPED_UNICODE),
         json_encode($sizes),
         trim($data['generated_by'] ?? ''),
@@ -112,6 +113,10 @@ function handle_update(): void {
         validate_slides($slides);
         $fields[] = 'slides = ?';
         $params[] = json_encode($slides, JSON_UNESCAPED_UNICODE);
+    }
+    if (array_key_exists('bgImage', $data)) {
+        $fields[] = 'bg_image = ?';
+        $params[] = $data['bgImage'] ?: null;
     }
     foreach (['bg_color','text_color','accent_color'] as $col) {
         $key = str_replace('_', '', lcfirst(ucwords($col, '_')));
@@ -268,10 +273,11 @@ function normalize_ad(array $ad, string $role): array {
     $ad['bgColor']     = $ad['bg_color'];
     $ad['textColor']   = $ad['text_color'];
     $ad['accentColor'] = $ad['accent_color'];
+    $ad['bgImage']     = $ad['bg_image'] ?? null;
     $ad['generatedBy'] = $ad['generated_by'];
     $ad['rejectionReason'] = $ad['rejection_reason'];
     $ad['createdAt']   = $ad['created_at'];
-    unset($ad['bg_color'], $ad['text_color'], $ad['accent_color'],
+    unset($ad['bg_color'], $ad['text_color'], $ad['accent_color'], $ad['bg_image'],
           $ad['generated_by'], $ad['rejection_reason'], $ad['created_at'], $ad['updated_at']);
     return $ad;
 }

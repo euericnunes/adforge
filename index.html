@@ -1489,7 +1489,10 @@ function renderCanvas() {
   const canEdit = ['admin', 'editor'].includes(state.user?.role);
   const ce = canEdit ? 'contenteditable="true"' : '';
   canvas.innerHTML = `
-    <div class="ad-bg" style="background:${ad.bgColor || '#1e2024'}"></div>
+    <div class="ad-bg" style="${ad.bgImage
+      ? `background:url(${ad.bgImage}) center/cover no-repeat;`
+      : `background:${ad.bgColor || '#1e2024'};`}"></div>
+    ${ad.bgImage ? `<div style="position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.15) 60%,transparent 100%)"></div>` : ''}
     <div class="ad-logo" style="color:${ad.accentColor || '#d4f24a'};font-size:${Math.max(10, 13 * scale)}px">${state.currentProject?.logo || ''}</div>
     <div class="ad-content">
       <div class="ad-tag" ${ce} data-field="tag" data-ph="+ Tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px;${slide.tag ? '' : 'opacity:0.4'}">${slide.tag || ''}</div>
@@ -1546,9 +1549,23 @@ function renderPanelContent() {
       ${ad.id ? renderApprovalActions() : ''}`;
 
   } else if (tab === 'design') {
+    const hasImg = !!ad.bgImage;
     body.innerHTML = `
+      <div class="panel-section">
+        <div class="panel-section-title">Imagem de Fundo</div>
+        ${hasImg ? `<div style="border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;aspect-ratio:1">
+          <img src="${ad.bgImage}" style="width:100%;height:100%;object-fit:cover;display:block">
+          <button onclick="removeBgImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✕ Remover</button>
+        </div>` : ''}
+        <textarea id="img-prompt-input" class="form-textarea" rows="3" placeholder="Descreva a imagem que deseja gerar..." style="margin-bottom:8px;font-size:12px"></textarea>
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="generateBgImage()" id="btn-gen-img">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><rect x="1" y="1" width="14" height="14" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M1 11l4-4 3 3 2-2 5 5"/></svg>
+          ${hasImg ? 'Regenerar imagem' : 'Gerar com DALL-E 3'}
+        </button>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Requer chave OpenAI configurada · ~$0,04 por imagem</div>
+      </div>
       <div class="panel-section"><div class="panel-section-title">Paleta de cores</div>
-        <div class="form-group"><label class="form-label">Fundo</label><input type="color" class="form-input" value="${ad.bgColor || '#1e2024'}" oninput="updateAdProp('bgColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+        <div class="form-group"><label class="form-label">Fundo ${hasImg ? '<span style="font-size:10px;color:var(--text3)">(com imagem ativa, cor fica oculta)</span>' : ''}</label><input type="color" class="form-input" value="${ad.bgColor || '#1e2024'}" oninput="updateAdProp('bgColor',this.value)" style="padding:4px;height:36px;cursor:pointer;${hasImg ? 'opacity:.4' : ''}"></div>
         <div class="form-group"><label class="form-label">Texto</label><input type="color" class="form-input" value="${ad.textColor || '#ffffff'}" oninput="updateAdProp('textColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
         <div class="form-group"><label class="form-label">Destaque</label><input type="color" class="form-input" value="${ad.accentColor || '#d4f24a'}" oninput="updateAdProp('accentColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
       </div>
@@ -1577,7 +1594,14 @@ function renderPanelContent() {
   }
 }
 
-function switchTab(tab) { state.currentPanelTab = tab; renderPanelContent(); }
+function switchTab(tab) {
+  state.currentPanelTab = tab;
+  renderPanelContent();
+  if (tab === 'design') {
+    const el = document.getElementById('img-prompt-input');
+    if (el && !el.value) el.value = buildImagePrompt();
+  }
+}
 
 function updateSlide(field, value) {
   if (!state.currentAd.slides[state.currentSlide]) state.currentAd.slides[state.currentSlide] = {};
@@ -1601,12 +1625,54 @@ async function saveCurrentAd() {
   const ad = state.currentAd;
   if (!ad?.id) return;
   try {
-    const updated = await api('ads.php', `action=update&id=${ad.id}`, 'PUT', { slides: ad.slides, bgColor: ad.bgColor, textColor: ad.textColor, accentColor: ad.accentColor, sizes: ad.sizes });
+    const updated = await api('ads.php', `action=update&id=${ad.id}`, 'PUT', { slides: ad.slides, bgColor: ad.bgColor, textColor: ad.textColor, accentColor: ad.accentColor, sizes: ad.sizes, bgImage: ad.bgImage ?? null });
     Object.assign(ad, updated);
     const i = state.ads.findIndex(a => a.id === ad.id);
     if (i !== -1) state.ads[i] = ad;
     showToast('Anúncio salvo!');
   } catch (e) { showToast(e.message, 'err'); }
+}
+
+function buildImagePrompt() {
+  const ad = state.currentAd;
+  const p  = state.currentProject;
+  const slide = ad?.slides?.[0];
+  const objMap = { conversion: 'publicidade de vendas', awareness: 'brand awareness', engagement: 'engajamento digital', retention: 'fidelização de clientes' };
+  return [
+    p?.name   ? `marca ${p.name}` : '',
+    slide?.headline ? slide.headline : '',
+    objMap[ad?.objective] || 'anúncio digital',
+    'fotografia publicitária profissional, iluminação cinematográfica, cores vibrantes, alta resolução',
+    'composição com espaço para texto, sem texto escrito, sem logotipo, sem watermark',
+  ].filter(Boolean).join(', ');
+}
+
+async function generateBgImage() {
+  const btn = document.getElementById('btn-gen-img');
+  const promptEl = document.getElementById('img-prompt-input');
+  const prompt = promptEl?.value?.trim() || buildImagePrompt();
+  if (!prompt) { showToast('Escreva um prompt para a imagem.', 'err'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando…'; }
+  try {
+    const ad     = state.currentAd;
+    const aspect = (ad?.sizes || ['feed']).includes('stories') ? 'portrait'
+                 : (ad?.sizes || ['feed']).includes('landscape') ? 'landscape' : 'square';
+    const result = await api('image.php', '', 'POST', { prompt, aspect });
+    state.currentAd.bgImage = result.url;
+    renderCanvas();
+    renderPanelContent();
+    showToast('Imagem gerada! Clique em Salvar para manter.');
+  } catch (e) {
+    showToast(e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = 'Gerar com DALL-E 3'; }
+  }
+}
+
+function removeBgImage() {
+  state.currentAd.bgImage = null;
+  renderCanvas();
+  renderPanelContent();
 }
 
 async function regenAd() {
