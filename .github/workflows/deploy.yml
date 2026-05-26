@@ -27,5 +27,4 @@ jobs:
             api/config.php
             uploads/**
             reset-admin.php
-            migrate.php
             database.sql
