@@ -30,12 +30,11 @@ $size   = match ($aspect) {
 };
 
 $body = json_encode([
-    'model'           => 'dall-e-3',
-    'prompt'          => $prompt,
-    'n'               => 1,
-    'size'            => $size,
-    'quality'         => 'standard',
-    'response_format' => 'url',
+    'model'   => 'dall-e-3',
+    'prompt'  => $prompt,
+    'n'       => 1,
+    'size'    => $size,
+    'quality' => 'standard',
 ]);
 
 $ch = curl_init('https://api.openai.com/v1/images/generations');
