@@ -2,6 +2,14 @@ Options -Indexes
 DirectoryIndex index.html index.php
 AddDefaultCharset UTF-8
 
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>
+
 # Redireciona para HTTPS (compatível com proxy/LiteSpeed)
 RewriteEngine On
 RewriteCond %{HTTPS} off
