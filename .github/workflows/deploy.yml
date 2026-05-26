@@ -32,7 +32,7 @@ jobs:
             migrate2.php
             database.sql
 
-      - name: Remove sensitive files from server
+      - name: Fix permissions and remove sensitive files
         run: |
           sudo apt-get install -y lftp -qq
-          lftp -c "set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftps://${{ secrets.FTP_HOST }}:21; rm -f migrate.php migrate2.php reset-admin.php 2>/dev/null || true; bye"
+          lftp -c "set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftps://${{ secrets.FTP_HOST }}:21; chmod 755 . 2>/dev/null; glob -a chmod 644 .htaccess *.html 2>/dev/null; glob -a chmod 644 *.php 2>/dev/null; chmod 755 api 2>/dev/null; cd api; glob -a chmod 644 *.php 2>/dev/null; cd ..; rm -f migrate.php migrate2.php reset-admin.php 2>/dev/null || true; bye"
