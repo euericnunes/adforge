@@ -267,6 +267,23 @@
   #ref-upload-area:hover { border-color:var(--accent); background:var(--accent-dim2); }
   #ref-upload-area.has-image { border-style:solid; border-color:var(--border2); padding:10px; }
 
+  /* V2 AD CANVAS */
+  .ad-v2-viewport { overflow:hidden; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.5); position:relative; background:#111; }
+  .ad-canvas-v2 { transform-origin:top left; position:relative; }
+  .ad-canvas-v2 [data-editable] { outline:none; cursor:text; transition:box-shadow 0.15s; border-radius:3px; }
+  .ad-canvas-v2 [data-editable]:hover { box-shadow:0 0 0 2px rgba(255,255,255,0.2) !important; }
+  .ad-canvas-v2 [data-editable]:focus { box-shadow:0 0 0 2px rgba(212,242,74,0.6) !important; }
+  /* GENERATOR V2 */
+  .gen-v2-modal { max-width:640px; }
+  .style-cards-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .style-card { border:1px solid var(--border); border-radius:var(--radius); padding:10px 8px; cursor:pointer; text-align:center; transition:all 0.15s; background:var(--bg3); }
+  .style-card:hover { border-color:var(--border2); }
+  .style-card.selected { border-color:var(--accent); background:var(--accent-dim); color:var(--accent); }
+  .style-card-emoji { font-size:18px; margin-bottom:4px; }
+  .style-card-name { font-size:11px; font-weight:600; }
+  /* INTELLIGENCE */
+  .intel-card { background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:var(--radius); padding:12px 16px; margin-bottom:8px; }
+  .intel-card-meta { font-size:10px; color:var(--text3); margin-top:6px; }
   /* LOGIN */
   #screen-loader { position:fixed; inset:0; background:var(--bg); z-index:300; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
   #screen-login  { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; align-items:center; justify-content:center; }
@@ -504,6 +521,7 @@
           <button class="settings-tab active" onclick="switchSettingsTab('users')" id="stab-users">Usuários</button>
           <button class="settings-tab" onclick="switchSettingsTab('assignments')" id="stab-assignments">Atribuições por Projeto</button>
           <button class="settings-tab" onclick="switchSettingsTab('ai')" id="stab-ai">Provedor de IA</button>
+          <button class="settings-tab" onclick="switchSettingsTab('intelligence')" id="stab-intelligence">Inteligência</button>
         </div>
         <div id="stab-content-users">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;margin-top:20px">
@@ -526,6 +544,18 @@
           <div style="max-width:600px;margin-top:24px">
             <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Ative os provedores disponíveis para gerar anúncios. Configure a chave de API de cada um.</div>
             <div id="ai-provider-cards" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
+        </div>
+        <div id="stab-content-intelligence" style="display:none">
+          <div style="max-width:700px;margin-top:24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px">Inteligência da Plataforma</div>
+                <div style="font-size:13px;color:var(--text2)">Padrões aprendidos automaticamente de todos os anúncios aprovados. Alimentam futuras gerações.</div>
+              </div>
+              <span id="intel-count-badge" class="inspired-badge" style="flex-shrink:0">0 padrões</span>
+            </div>
+            <div id="intel-list"></div>
           </div>
         </div>
       </div>
@@ -635,37 +665,17 @@
 </div>
 
 <div class="modal-overlay" id="modal-generator">
-  <div class="modal gen-modal">
-    <div class="modal-title">✦ Gerar Anúncio com IA</div>
-    <div class="gen-steps">
-      <div class="gen-step active" id="gstep-1">1. Tipo</div>
-      <div class="gen-step" id="gstep-2">2. Prompt</div>
-      <div class="gen-step" id="gstep-3">3. Tamanhos</div>
+  <div class="modal gen-v2-modal">
+    <div class="modal-title">✦ Criar Anúncio com IA</div>
+
+    <div class="gen-section">
+      <div class="gen-section-title">O que você quer anunciar?</div>
+      <textarea class="form-textarea" id="gen-prompt" placeholder="Descreva o que deseja anunciar, a oferta, produto ou mensagem principal..." style="min-height:100px"></textarea>
     </div>
-    <div id="gform-1">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="gen-section">
-        <div class="gen-section-title">Formato do anúncio</div>
-        <div class="type-cards">
-          <div class="type-card selected" id="type-single" onclick="selectType('single')"><div class="type-card-name">Imagem Única</div><div class="type-card-desc">1 arte completa com headline, body e CTA</div></div>
-          <div class="type-card" id="type-carousel" onclick="selectType('carousel')"><div class="type-card-name">Carrossel</div><div class="type-card-desc">Múltiplos slides contando uma história</div></div>
-        </div>
-      </div>
-      <div class="gen-section" id="carousel-slides-section" style="display:none">
-        <div class="gen-section-title">Número de slides</div>
-        <div class="size-chips">
-          <div class="size-chip selected" data-slides="3" onclick="selectSlides(this)">3 slides</div>
-          <div class="size-chip" data-slides="4" onclick="selectSlides(this)">4 slides</div>
-          <div class="size-chip" data-slides="5" onclick="selectSlides(this)">5 slides</div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeModal('modal-generator')">Cancelar</button>
-        <button class="btn btn-primary" onclick="genStep(2)">Próximo →</button>
-      </div>
-    </div>
-    <div id="gform-2" style="display:none">
-      <div class="gen-section">
-        <div class="gen-section-title">Objetivo do anúncio</div>
+        <div class="gen-section-title">Objetivo</div>
         <div class="size-chips" id="objective-chips">
           <div class="size-chip selected" data-obj="conversion" onclick="selectObjective(this)">Conversão</div>
           <div class="size-chip" data-obj="awareness" onclick="selectObjective(this)">Awareness</div>
@@ -674,40 +684,46 @@
         </div>
       </div>
       <div class="gen-section">
-        <div class="gen-section-title">O que você quer anunciar?</div>
-        <textarea class="form-textarea" id="gen-prompt" placeholder="Ex: Promoção de limpeza de pele com 30% de desconto neste mês." style="min-height:100px"></textarea>
-      </div>
-      <div class="gen-section">
-        <div class="gen-section-title">Inspiração por nicho</div>
-        <div class="inspiration-preview" id="inspiration-preview">Buscando projetos do mesmo nicho...</div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="genStep(1)">← Voltar</button>
-        <button class="btn btn-primary" onclick="genStep(3)">Próximo →</button>
-      </div>
-    </div>
-    <div id="gform-3" style="display:none">
-      <div class="gen-section">
-        <div class="gen-section-title">Tamanhos para exportar</div>
-        <div class="size-chips">
-          <div class="size-chip selected" data-size="feed" onclick="toggleGenSize(this)">Feed 1:1 (1080×1080)</div>
-          <div class="size-chip" data-size="stories" onclick="toggleGenSize(this)">Stories 9:16 (1080×1920)</div>
-          <div class="size-chip" data-size="landscape" onclick="toggleGenSize(this)">Paisagem 16:9 (1280×720)</div>
-          <div class="size-chip" data-size="portrait" onclick="toggleGenSize(this)">Retrato 4:5 (1080×1350)</div>
+        <div class="gen-section-title">Tamanho</div>
+        <div class="size-chips" id="gen-size-chips">
+          <div class="size-chip selected" data-size="feed" onclick="selectGenSize(this)">Feed 1:1</div>
+          <div class="size-chip" data-size="stories" onclick="selectGenSize(this)">Stories 9:16</div>
+          <div class="size-chip" data-size="landscape" onclick="selectGenSize(this)">Paisagem 16:9</div>
+          <div class="size-chip" data-size="portrait" onclick="selectGenSize(this)">Retrato 4:5</div>
         </div>
       </div>
-      <div class="gen-section">
-        <div class="gen-section-title">Provedor de IA</div>
-        <div id="gen-provider-chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-        <div id="gen-provider-hint" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
+    </div>
+
+    <div class="gen-section">
+      <div class="gen-section-title">Estilo Visual</div>
+      <div class="style-cards-row">
+        <div class="style-card selected" data-style="modern" onclick="selectGenStyle(this)">
+          <div class="style-card-emoji">🎯</div><div class="style-card-name">Moderno</div>
+        </div>
+        <div class="style-card" data-style="bold" onclick="selectGenStyle(this)">
+          <div class="style-card-emoji">⚡</div><div class="style-card-name">Ousado</div>
+        </div>
+        <div class="style-card" data-style="minimal" onclick="selectGenStyle(this)">
+          <div class="style-card-emoji">🤍</div><div class="style-card-name">Minimalista</div>
+        </div>
+        <div class="style-card" data-style="typographic" onclick="selectGenStyle(this)">
+          <div class="style-card-emoji">✍️</div><div class="style-card-name">Tipográfico</div>
+        </div>
       </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="genStep(2)">← Voltar</button>
-        <button class="btn btn-primary" onclick="startGeneration()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6Z"/></svg>
-          Gerar com IA
-        </button>
-      </div>
+    </div>
+
+    <div class="gen-section">
+      <div class="gen-section-title">Provedor de IA</div>
+      <div id="gen-provider-chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      <div id="gen-provider-hint" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-generator')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-gen-start" onclick="startGeneration()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 11.5L3.5 15L5 9.5L1 6H6Z"/></svg>
+        Gerar Anúncio
+      </button>
     </div>
   </div>
 </div>
@@ -808,8 +824,9 @@ const state = {
   users: [],
   editingUserId: null,
   refUpload: null,
-  gen: { type: 'single', slides: 3, objective: 'conversion', sizes: ['feed'], prompt: '', provider: null, model: null },
+  gen: { objective: 'conversion', size: 'feed', style: 'modern', prompt: '', provider: null, model: null },
   currentPanelTab: 'content',
+  platformIntelligence: [],
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -1142,15 +1159,21 @@ function renderAdsGrid(ads) {
   </div>`;
   for (const ad of ads) {
     const slide = ad.slides?.[0] || {};
-    html += `<div class="ad-thumb" onclick="openEditor(${ad.id})">
-      <div class="ad-thumb-preview" style="background:${ad.bgColor || '#1e2024'}">
-        <div style="padding:12px;width:100%">
+    const sz = AD_SIZES[ad.sizes?.[0]] || AD_SIZES.feed;
+    const thumbScale = 160 / sz.h;
+    const thumbW = Math.round(sz.w * thumbScale);
+    const thumbPreview = ad.htmlCanvas
+      ? `<div style="width:${sz.w}px;height:${sz.h}px;transform:scale(${thumbScale});transform-origin:top left;position:absolute;top:0;left:0;pointer-events:none;overflow:hidden">${ad.htmlCanvas}</div>`
+      : `<div style="padding:12px;width:100%">
           ${slide.headline ? `<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;line-height:1.2;color:${ad.textColor || '#fff'}">${slide.headline.slice(0, 50)}</div>` : ''}
           ${slide.body ? `<div style="font-size:9px;margin-top:4px;opacity:.7;line-height:1.4;color:${ad.textColor || '#fff'}">${slide.body.slice(0, 60)}</div>` : ''}
           ${slide.cta ? `<div style="font-size:9px;font-weight:600;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:6px;background:${ad.accentColor || '#d4f24a'};color:#0e0f11">${slide.cta}</div>` : ''}
-        </div>
-        <div style="position:absolute;top:8px;right:8px"><span class="ad-status ad-status-${ad.status}">${statusName(ad.status)}</span></div>
-        <div style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px">
+        </div>`;
+    html += `<div class="ad-thumb" onclick="openEditor(${ad.id})">
+      <div class="ad-thumb-preview" style="background:${ad.bgColor || '#1e2024'};${ad.htmlCanvas ? `width:${thumbW}px;` : ''}">
+        ${thumbPreview}
+        <div style="position:absolute;top:8px;right:8px;z-index:10"><span class="ad-status ad-status-${ad.status}">${statusName(ad.status)}</span></div>
+        <div style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px;z-index:10">
           <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openRenameAd(${ad.id})" style="padding:3px 6px">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>
           </button>
@@ -1164,7 +1187,7 @@ function renderAdsGrid(ads) {
       </div>
       <div class="ad-thumb-info">
         <div class="ad-thumb-name">${ad.name}</div>
-        <div class="ad-thumb-date">${fmtDate(ad.createdAt)} · ${ad.type === 'carousel' ? (ad.slides?.length || 1) + ' slides' : 'imagem única'}</div>
+        <div class="ad-thumb-date">${fmtDate(ad.createdAt)} · ${ad.htmlCanvas ? 'design IA' : ad.type === 'carousel' ? (ad.slides?.length || 1) + ' slides' : 'imagem única'}</div>
       </div>
     </div>`;
   }
@@ -1218,52 +1241,35 @@ async function deleteAd(id) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// GENERATOR
+// GENERATOR V2
 // ══════════════════════════════════════════════════════════════
 function openGenerator() {
-  state.gen = { type: 'single', slides: 3, objective: 'conversion', sizes: ['feed'], prompt: '', provider: null, model: null };
-  genStep(1);
-  document.getElementById('gen-prompt').value = '';
-  loadInspirations();
+  const prev = state.gen.prompt || '';
+  state.gen = { objective: state.gen.objective || 'conversion', size: state.gen.size || 'feed', style: state.gen.style || 'modern', prompt: prev, provider: state.gen.provider, model: state.gen.model };
+  document.getElementById('gen-prompt').value = prev;
+  // Restore chip selections
+  document.querySelectorAll('#objective-chips .size-chip').forEach(c => c.classList.toggle('selected', c.dataset.obj === state.gen.objective));
+  document.querySelectorAll('#gen-size-chips .size-chip').forEach(c => c.classList.toggle('selected', c.dataset.size === state.gen.size));
+  document.querySelectorAll('.style-card').forEach(c => c.classList.toggle('selected', c.dataset.style === state.gen.style));
+  renderGenProviderChips();
   openModal('modal-generator');
-}
-
-function selectType(t) {
-  state.gen.type = t;
-  document.getElementById('type-single').classList.toggle('selected', t === 'single');
-  document.getElementById('type-carousel').classList.toggle('selected', t === 'carousel');
-  document.getElementById('carousel-slides-section').style.display = t === 'carousel' ? '' : 'none';
-}
-
-function selectSlides(el) {
-  state.gen.slides = parseInt(el.dataset.slides);
-  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-function genStep(n) {
-  [1, 2, 3].forEach(i => {
-    document.getElementById(`gform-${i}`).style.display = i === n ? '' : 'none';
-    const s = document.getElementById(`gstep-${i}`);
-    s.classList.toggle('active', i === n);
-    s.classList.toggle('done', i < n);
-  });
-  if (n === 3) renderGenProviderChips();
-}
-
-function loadInspirations() {
-  const approved = state.ads.filter(a => a.status === 'approved').slice(0, 3);
-  const preview = document.getElementById('inspiration-preview');
-  if (approved.length) {
-    preview.innerHTML = approved.map(a => `<div style="margin-bottom:6px">✦ <strong>${a.name}</strong> — "${(a.slides?.[0]?.headline || '').slice(0, 60)}"</div>`).join('');
-  } else {
-    preview.textContent = 'Nenhum anúncio aprovado neste projeto ainda.';
-  }
 }
 
 function selectObjective(el) {
   state.gen.objective = el.dataset.obj;
   el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectGenSize(el) {
+  state.gen.size = el.dataset.size;
+  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectGenStyle(el) {
+  state.gen.style = el.dataset.style;
+  el.closest('.style-cards-row').querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
 }
 
@@ -1321,33 +1327,38 @@ async function startGeneration() {
   if (!state.brain.contexts?.length && !state.brain.voice) {
     try { state.brain = await api('brain.php', `action=get&project_id=${state.currentProject.id}`); } catch (_) {}
   }
-  const sizes = [];
-  document.querySelectorAll('#gform-3 .size-chip.selected[data-size]').forEach(el => sizes.push(el.dataset.size));
-  state.gen.sizes = sizes.length ? sizes : ['feed'];
+  const btn = document.getElementById('btn-gen-start');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando…'; }
   closeModal('modal-generator');
   showView('editor');
 
+  const sz = AD_SIZES[state.gen.size] || AD_SIZES.feed;
   const placeholder = {
-    id: null, name: 'Gerando anúncio...', type: state.gen.type, objective: state.gen.objective,
+    id: null, name: 'Gerando anúncio...', type: 'single', objective: state.gen.objective,
     bgColor: '#1e2024', textColor: '#ffffff', accentColor: state.currentProject?.color || '#d4f24a',
-    slides: [{ headline: '', body: '', cta: '' }], sizes: state.gen.sizes, status: 'draft',
+    slides: [{ headline: '', body: '', cta: '' }], sizes: [state.gen.size], status: 'draft',
+    htmlCanvas: null,
   };
   state.currentAd = placeholder;
   state.currentSlide = 0;
   state.currentPanelTab = 'content';
   renderEditor();
   document.getElementById('gen-overlay').classList.add('show');
-  document.getElementById('gen-text').textContent = 'Gerando com IA...';
+  document.getElementById('gen-text').textContent = 'A IA está criando seu anúncio...';
 
   try {
-    const slides = await generateAdWithAI();
-    placeholder.slides = slides;
+    const htmlCanvas = await generateAdWithAI();
+    placeholder.htmlCanvas = htmlCanvas;
     const saved = await api('ads.php', 'action=create', 'POST', {
       project_id: state.currentProject.id,
       name: `Anúncio ${new Date().toLocaleDateString('pt-BR')} — ${state.gen.objective}`,
-      type: state.gen.type, objective: state.gen.objective, slides,
-      sizes: state.gen.sizes, bgColor: placeholder.bgColor,
-      textColor: placeholder.textColor, accentColor: placeholder.accentColor,
+      type: 'single', objective: state.gen.objective,
+      slides: [{ headline: '', body: '', cta: '' }],
+      sizes: [state.gen.size],
+      bgColor: placeholder.bgColor,
+      textColor: placeholder.textColor,
+      accentColor: placeholder.accentColor,
+      htmlCanvas,
       generated_by: `${state.gen.provider}/${state.gen.model}`,
     });
     state.currentAd = saved;
@@ -1356,53 +1367,73 @@ async function startGeneration() {
     showToast('Anúncio gerado!');
   } catch (e) {
     showToast('Erro ao gerar: ' + e.message, 'err');
-    const fallback = makeFallbackAd();
-    placeholder.slides = fallback;
-    try {
-      const saved = await api('ads.php', 'action=create', 'POST', {
-        project_id: state.currentProject.id,
-        name: `Anúncio ${new Date().toLocaleDateString('pt-BR')}`,
-        type: state.gen.type, objective: state.gen.objective, slides: fallback,
-        sizes: state.gen.sizes, bgColor: placeholder.bgColor,
-        textColor: placeholder.textColor, accentColor: placeholder.accentColor,
-      });
-      state.currentAd = saved;
-      state.ads.unshift(saved);
-    } catch (_) {}
-    renderEditor();
+    showView('ads');
   } finally {
     document.getElementById('gen-overlay').classList.remove('show');
+    if (btn) { btn.disabled = false; btn.textContent = 'Gerar Anúncio'; }
   }
 }
 
 async function generateAdWithAI() {
-  const { provider, model, type, slides: numSlides, objective, prompt } = state.gen;
+  const { provider, model, objective, prompt, style, size } = state.gen;
   const brain = buildBrainContext();
   const p = state.currentProject;
+  const sz = AD_SIZES[size] || AD_SIZES.feed;
+  const intel = await getPlatformIntelligence();
 
-  const SYSTEM = `Você é especialista em marketing digital e copywriting para redes sociais. Cria anúncios persuasivos, diretos e alinhados com a identidade da marca. Responda SOMENTE com JSON válido, sem texto extra, sem markdown.`;
-  const USER = `Crie um anúncio ${type === 'carousel' ? `carrossel com ${numSlides} slides` : 'de imagem única'} para a marca abaixo.
+  const styleGuide = {
+    modern:      'Design moderno e profissional. Geometrias limpas, tipografia forte, hierarquia visual clara, uso generoso de espaço negativo.',
+    bold:        'Design ousado e impactante. Cores vibrantes e contrastantes, tipografia XL que domina o espaço, energia visual máxima.',
+    minimal:     'Design minimalista e elegante. Muito espaço em branco, paleta reduzida (2-3 cores), elementos essenciais apenas, luxo pelo que falta.',
+    typographic: 'Design tipográfico criativo. O texto É o design. Jogos de peso, tamanho e posição das fontes criam o impacto visual.',
+  }[style] || '';
 
-== IDENTIDADE DA MARCA ==
+  const objGuide = {
+    conversion:  'Foco em conversão: urgência, oferta clara, CTA irresistível. O usuário deve agir AGORA.',
+    awareness:   'Brand awareness: nome da marca em destaque, mensagem memorável, identidade forte. O usuário deve lembrar.',
+    engagement:  'Engajamento: provocativo, curioso ou emocional. O usuário deve reagir, comentar ou compartilhar.',
+    retention:   'Retenção: valoriza quem já é cliente. Tom exclusivo, benefício de fidelidade, comunidade.',
+  }[objective] || '';
+
+  const SYSTEM = `Você é um designer de anúncios digitais de classe mundial. Cria HTML/CSS puro que resulta em anúncios profissionais visualmente impressionantes para redes sociais.
+
+REGRAS ABSOLUTAS:
+- Retorne SOMENTE o HTML. Zero explicações, zero markdown, zero backticks.
+- Use APENAS estilos inline (style="..."). NENHUMA tag <style>, NENHUMA classe CSS externa.
+- O elemento raiz DEVE ser: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif">
+- Marque textos editáveis com data-editable="headline", data-editable="body", data-editable="cta", data-editable="tag"
+- Fontes disponíveis: 'Syne' (títulos impactantes, bold), 'DM Sans' (texto, body)
+- Use APENAS CSS gradients, formas geométricas e cores para o visual. Sem imagens externas.
+- O resultado deve ser IDÊNTICO a um anúncio de agência premium de publicidade.`;
+
+  const USER = `Crie um anúncio social de ${sz.w}×${sz.h}px.
+
+== MARCA ==
 Projeto: ${p?.name || ''}
+Logo/Nome da marca: ${p?.logo || p?.name || ''}
+Cor de destaque da marca: ${p?.color || '#d4f24a'}
 ${p?.context ? `Contexto: ${p.context}` : ''}
-${brain ? `\n== INTELIGÊNCIA DE MARCA (CÉREBRO) ==\n${brain}` : ''}
+${brain ? `\n== CÉREBRO DA MARCA ==\n${brain}` : ''}
+${intel ? intel : ''}
 
 == BRIEFING ==
-Objetivo: ${objective}
+Objetivo: ${objective} — ${objGuide}
 O que anunciar: ${prompt}
 
-== REGRAS ==
-- headline: máx 60 chars, impactante e direto ao ponto
-- body: máx 120 chars, suporte ao headline com benefício claro
-- cta: máx 25 chars, ação objetiva (ex: "Saiba Mais", "Garanta Agora")
-- tag: máx 20 chars, categoria ou destaque — pode ser vazio
-- Use o tom, vocabulário e persona da marca quando disponíveis no Cérebro
-- NÃO use palavras marcadas como "evitar"
+== ESTILO VISUAL ==
+${styleGuide}
 
-Retorne SOMENTE este JSON (sem comentários):
-{"slides":[{"headline":"","body":"","cta":"","tag":""}]}
-${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. Slide 1: gancho forte. Slides intermediários: desenvolvimento/prova social. Último slide: CTA claro.`}`;
+== DIRETRIZES DE DESIGN ==
+- Crie visual de agência premium, não template genérico
+- Tipografia: use Syne para headlines (font-weight:700 ou 800), DM Sans para corpo
+- Hierarquia: headline domina, body apoia, CTA converte
+- O logo/nome da marca deve aparecer discretamente (canto superior, 13-16px, font-family:Syne, font-weight:800)
+- Use data-editable nos textos: headline principal, body/subtítulo, CTA button, tag/categoria
+- Paleta baseada na cor de destaque da marca com variações elegantes
+- Background: gradiente criativo ou cor sólida (NO branco puro)
+- Elementos decorativos geométricos podem enriquecer o design (círculos, linhas, formas)
+
+Retorne o HTML agora:`;
 
   const result = await api('ai.php', '', 'POST', {
     provider, model,
@@ -1410,16 +1441,31 @@ ${type === 'single' ? 'Exatamente 1 slide.' : `Exatamente ${numSlides} slides. S
     user_prompt: USER,
   });
 
-  const content = result.content;
-  const m = content.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('Resposta da IA sem JSON válido');
-  const parsed = JSON.parse(m[0]);
-  if (!Array.isArray(parsed.slides) || !parsed.slides.length) throw new Error('Formato de resposta inválido');
-  return parsed.slides;
+  let html = result.content.trim();
+  // Strip any accidental markdown backticks
+  html = html.replace(/^```html?\s*/i, '').replace(/\s*```$/, '').trim();
+  if (!html.includes('data-editable')) throw new Error('HTML gerado sem elementos editáveis. Tente novamente.');
+  return html;
 }
 
-function makeFallbackAd() {
-  return [{ headline: state.currentProject?.name ? `Conheça ${state.currentProject.name}` : 'Sua solução aqui', body: state.gen.prompt.slice(0, 120) || 'Saiba mais sobre nossos serviços.', cta: 'Saiba Mais', tag: 'Novidade' }];
+async function getPlatformIntelligence() {
+  if (state.platformIntelligence.length) {
+    return formatIntelligence(state.platformIntelligence.slice(0, 8));
+  }
+  try {
+    const records = await api('intelligence.php', 'action=list&limit=10');
+    if (records?.length) {
+      state.platformIntelligence = records;
+      return formatIntelligence(records.slice(0, 8));
+    }
+  } catch (_) {}
+  return '';
+}
+
+function formatIntelligence(records) {
+  if (!records?.length) return '';
+  return '\n== INTELIGÊNCIA DA PLATAFORMA (o que funciona nos melhores anúncios desta ferramenta) ==\n' +
+    records.map(r => `- ${r.content}${r.source_project_name ? ` (de: ${r.source_project_name})` : ''}`).join('\n');
 }
 
 function buildBrainContext() {
@@ -1456,8 +1502,9 @@ function renderEditor() {
   const ad = state.currentAd;
   if (!ad) return;
   document.getElementById('topbar-title').textContent = ad.name || 'Editor';
+  const isV2 = !!ad.htmlCanvas;
   document.getElementById('topbar-actions').innerHTML = `<div style="display:flex;gap:8px;align-items:center">
-    ${ad.id ? `<button class="btn btn-ghost btn-sm" onclick="regenAd()">↻ Gerar novamente</button>` : ''}
+    ${ad.id ? `<button class="btn btn-ghost btn-sm" onclick="regenAd()" title="${isV2 ? 'Gerar novo design com IA' : 'Gerar nova versão'}">↻ Gerar novamente</button>` : ''}
     ${ad.id ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteAd(${ad.id})">Excluir</button>` : ''}
     <button class="btn btn-primary btn-sm" onclick="saveCurrentAd()">Salvar</button>
   </div>`;
@@ -1475,47 +1522,72 @@ const AD_SIZES = {
 function renderCanvas() {
   const ad = state.currentAd;
   if (!ad) return;
-  const slide = ad.slides?.[state.currentSlide] || {};
   const sz = AD_SIZES[ad.sizes?.[0]] || AD_SIZES.feed;
-  const maxH = Math.min(window.innerHeight - 220, 480);
+  const maxH = Math.min(window.innerHeight - 220, 520);
   const scale = maxH / sz.h;
   const dw = Math.round(sz.w * scale);
   const dh = Math.round(sz.h * scale);
-  const hSize = Math.max(16, Math.floor(sz.h * 0.048 * scale));
-  const bSize = Math.max(10, Math.floor(sz.h * 0.018 * scale));
-  const canvas = document.getElementById('ad-canvas');
+  const wrapper = document.getElementById('canvas-wrapper');
+  const canvasEl = document.getElementById('ad-canvas');
   const nav = document.getElementById('carousel-nav');
-  canvas.style.cssText = `width:${dw}px;height:${dh}px;background:${ad.bgColor || '#1e2024'}`;
-  const canEdit = ['admin', 'editor'].includes(state.user?.role);
-  const ce = canEdit ? 'contenteditable="true"' : '';
-  canvas.innerHTML = `
-    <div class="ad-bg" style="${ad.bgImage
-      ? `background:url(${ad.bgImage}) center/cover no-repeat;`
-      : `background:${ad.bgColor || '#1e2024'};`}"></div>
-    ${ad.bgImage ? `<div style="position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.15) 60%,transparent 100%)"></div>` : ''}
-    <div class="ad-logo" style="color:${ad.accentColor || '#d4f24a'};font-size:${Math.max(10, 13 * scale)}px">${state.currentProject?.logo || ''}</div>
-    <div class="ad-content">
-      <div class="ad-tag" ${ce} data-field="tag" data-ph="+ Tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px;${slide.tag ? '' : 'opacity:0.4'}">${slide.tag || ''}</div>
-      <div class="ad-headline" ${ce} data-field="headline" data-ph="Headline" style="color:${ad.textColor || '#fff'};font-size:${hSize}px">${slide.headline || ''}</div>
-      <div class="ad-body" ${ce} data-field="body" data-ph="Texto de suporte" style="color:${ad.textColor || '#fff'};font-size:${bSize}px;${slide.body ? '' : 'opacity:0.4'}">${slide.body || ''}</div>
-      <div class="ad-cta" ${ce} data-field="cta" data-ph="CTA" style="background:${ad.accentColor || '#d4f24a'};color:#0e0f11;font-size:${Math.max(9, 13 * scale)}px;${slide.cta ? '' : 'opacity:0.5'}">${slide.cta || ''}</div>
-    </div>`;
-  if (canEdit) {
-    canvas.querySelectorAll('[data-field]').forEach(el => {
-      el.addEventListener('input', () => {
-        if (!state.currentAd?.slides?.[state.currentSlide]) return;
-        const val = el.textContent.replace(/\n/g, ' ').trim();
-        state.currentAd.slides[state.currentSlide][el.dataset.field] = val;
-        el.style.opacity = val ? '' : '0.4';
+  nav.style.display = 'none';
+
+  if (ad.htmlCanvas) {
+    // V2: render AI-generated HTML canvas
+    wrapper.className = 'ad-v2-viewport';
+    wrapper.style.cssText = `width:${dw}px;height:${dh}px;background:#111`;
+    canvasEl.className = 'ad-canvas-v2';
+    canvasEl.style.cssText = `width:${sz.w}px;height:${sz.h}px;transform:scale(${scale});transform-origin:top left;position:relative;overflow:hidden`;
+    canvasEl.innerHTML = ad.htmlCanvas;
+
+    const canEdit = ['admin', 'editor'].includes(state.user?.role);
+    if (canEdit) {
+      canvasEl.querySelectorAll('[data-editable]').forEach(el => {
+        el.contentEditable = 'true';
+        el.addEventListener('input', () => {
+          state.currentAd.htmlCanvas = canvasEl.innerHTML;
+        });
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+        });
       });
-      el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
-    });
-  }
-  if (ad.type === 'carousel' && ad.slides?.length > 1) {
-    nav.style.display = '';
-    nav.innerHTML = ad.slides.map((_, i) => `<div class="carousel-dot ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})"></div>`).join('');
+    }
   } else {
-    nav.style.display = 'none';
+    // V1 fallback: fixed template
+    const slide = ad.slides?.[state.currentSlide] || {};
+    const hSize = Math.max(16, Math.floor(sz.h * 0.048 * scale));
+    const bSize = Math.max(10, Math.floor(sz.h * 0.018 * scale));
+    wrapper.className = 'ad-canvas-wrapper';
+    wrapper.style.cssText = '';
+    canvasEl.className = 'ad-canvas';
+    canvasEl.style.cssText = `width:${dw}px;height:${dh}px;background:${ad.bgColor || '#1e2024'}`;
+    const canEdit = ['admin', 'editor'].includes(state.user?.role);
+    const ce = canEdit ? 'contenteditable="true"' : '';
+    canvasEl.innerHTML = `
+      <div class="ad-bg" style="${ad.bgImage ? `background:url(${ad.bgImage}) center/cover no-repeat;` : `background:${ad.bgColor || '#1e2024'};`}"></div>
+      ${ad.bgImage ? `<div style="position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.15) 60%,transparent 100%)"></div>` : ''}
+      <div class="ad-logo" style="color:${ad.accentColor || '#d4f24a'};font-size:${Math.max(10, 13 * scale)}px">${state.currentProject?.logo || ''}</div>
+      <div class="ad-content">
+        <div class="ad-tag" ${ce} data-field="tag" data-ph="+ Tag" style="background:${ad.accentColor}22;color:${ad.accentColor};font-size:${Math.max(8, 11 * scale)}px;${slide.tag ? '' : 'opacity:0.4'}">${slide.tag || ''}</div>
+        <div class="ad-headline" ${ce} data-field="headline" data-ph="Headline" style="color:${ad.textColor || '#fff'};font-size:${hSize}px">${slide.headline || ''}</div>
+        <div class="ad-body" ${ce} data-field="body" data-ph="Texto de suporte" style="color:${ad.textColor || '#fff'};font-size:${bSize}px;${slide.body ? '' : 'opacity:0.4'}">${slide.body || ''}</div>
+        <div class="ad-cta" ${ce} data-field="cta" data-ph="CTA" style="background:${ad.accentColor || '#d4f24a'};color:#0e0f11;font-size:${Math.max(9, 13 * scale)}px;${slide.cta ? '' : 'opacity:0.5'}">${slide.cta || ''}</div>
+      </div>`;
+    if (canEdit) {
+      canvasEl.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('input', () => {
+          if (!state.currentAd?.slides?.[state.currentSlide]) return;
+          const val = el.textContent.replace(/\n/g, ' ').trim();
+          state.currentAd.slides[state.currentSlide][el.dataset.field] = val;
+          el.style.opacity = val ? '' : '0.4';
+        });
+        el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+      });
+    }
+    if (ad.type === 'carousel' && ad.slides?.length > 1) {
+      nav.style.display = '';
+      nav.innerHTML = ad.slides.map((_, i) => `<div class="carousel-dot ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})"></div>`).join('');
+    }
   }
 }
 
@@ -1535,8 +1607,9 @@ function renderPanelContent() {
 
   if (tab === 'content') {
     const slide = ad.slides?.[state.currentSlide] || {};
+    const editTip = canEdit ? `<div class="panel-section"><div style="font-size:11px;color:var(--text3);display:flex;align-items:flex-start;gap:6px;line-height:1.5"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;flex-shrink:0;margin-top:1px"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>${ad.htmlCanvas ? 'Clique em qualquer texto do anúncio para editar diretamente no canvas.' : 'Clique em qualquer texto do anúncio para editar.'}</div></div>` : '';
     let slidesHtml = '';
-    if (ad.type === 'carousel') {
+    if (!ad.htmlCanvas && ad.type === 'carousel') {
       slidesHtml = `<div class="panel-section"><div class="panel-section-title">Slides</div><div class="slide-list">
         ${(ad.slides || []).map((s, i) => `<div class="slide-item ${i === state.currentSlide ? 'active' : ''}" onclick="goSlide(${i})">
           <div class="slide-num">${i + 1}</div>
@@ -1544,39 +1617,53 @@ function renderPanelContent() {
         </div>`).join('')}
       </div></div>`;
     }
-    body.innerHTML = `${slidesHtml}
-      ${canEdit ? `<div class="panel-section"><div style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;flex-shrink:0"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>Clique em qualquer texto do anúncio para editar diretamente.</div></div>` : ''}
-      ${ad.id ? renderApprovalActions() : ''}`;
+    body.innerHTML = `${slidesHtml}${editTip}${ad.id ? renderApprovalActions() : ''}`;
 
   } else if (tab === 'design') {
-    const hasImg = !!ad.bgImage;
-    body.innerHTML = `
-      <div class="panel-section">
-        <div class="panel-section-title">Imagem de Fundo</div>
-        ${hasImg ? `<div style="border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;aspect-ratio:1">
-          <img src="${ad.bgImage}" style="width:100%;height:100%;object-fit:cover;display:block">
-          <button onclick="removeBgImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✕ Remover</button>
-        </div>` : ''}
-        <textarea id="img-prompt-input" class="form-textarea" rows="3" placeholder="Descreva a imagem que deseja gerar..." style="margin-bottom:8px;font-size:12px"></textarea>
-        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="generateBgImage()" id="btn-gen-img">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><rect x="1" y="1" width="14" height="14" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M1 11l4-4 3 3 2-2 5 5"/></svg>
-          ${hasImg ? 'Regenerar imagem' : 'Gerar com DALL-E 3'}
-        </button>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Requer chave OpenAI configurada · ~$0,04 por imagem</div>
-      </div>
-      <div class="panel-section"><div class="panel-section-title">Paleta de cores</div>
-        <div class="form-group"><label class="form-label">Fundo ${hasImg ? '<span style="font-size:10px;color:var(--text3)">(com imagem ativa, cor fica oculta)</span>' : ''}</label><input type="color" class="form-input" value="${ad.bgColor || '#1e2024'}" oninput="updateAdProp('bgColor',this.value)" style="padding:4px;height:36px;cursor:pointer;${hasImg ? 'opacity:.4' : ''}"></div>
-        <div class="form-group"><label class="form-label">Texto</label><input type="color" class="form-input" value="${ad.textColor || '#ffffff'}" oninput="updateAdProp('textColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
-        <div class="form-group"><label class="form-label">Destaque</label><input type="color" class="form-input" value="${ad.accentColor || '#d4f24a'}" oninput="updateAdProp('accentColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
-      </div>
-      <div class="panel-section"><div class="panel-section-title">Tamanhos</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${Object.entries(AD_SIZES).map(([k, v]) => `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
-            <input type="checkbox" ${(ad.sizes || []).includes(k) ? 'checked' : ''} onchange="toggleSize('${k}',this.checked)">
-            ${v.label}<span style="font-size:10px;color:var(--text3)">${v.w}×${v.h}</span>
-          </label>`).join('')}
+    if (ad.htmlCanvas) {
+      // V2: AI-generated HTML — offer to regenerate with different style
+      body.innerHTML = `
+        <div class="panel-section">
+          <div class="panel-section-title">Redesenhar</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">O design foi gerado pela IA com base no seu briefing. Para mudar o visual, gere um novo anúncio ou clique em "Gerar novamente".</div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="regenAd()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><path d="M14 8A6 6 0 1 1 8 2M14 2v4h-4"/></svg>
+            Gerar novamente
+          </button>
         </div>
-      </div>`;
+        <div class="panel-section"><div class="panel-section-title">Tamanho atual</div>
+          <div style="font-size:13px;color:var(--text2)">${AD_SIZES[ad.sizes?.[0]]?.label || 'Feed 1:1'} — ${(AD_SIZES[ad.sizes?.[0]] || AD_SIZES.feed).w}×${(AD_SIZES[ad.sizes?.[0]] || AD_SIZES.feed).h}px</div>
+        </div>`;
+    } else {
+      const hasImg = !!ad.bgImage;
+      body.innerHTML = `
+        <div class="panel-section">
+          <div class="panel-section-title">Imagem de Fundo</div>
+          ${hasImg ? `<div style="border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;aspect-ratio:1">
+            <img src="${ad.bgImage}" style="width:100%;height:100%;object-fit:cover;display:block">
+            <button onclick="removeBgImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✕ Remover</button>
+          </div>` : ''}
+          <textarea id="img-prompt-input" class="form-textarea" rows="3" placeholder="Descreva a imagem que deseja gerar..." style="margin-bottom:8px;font-size:12px"></textarea>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="generateBgImage()" id="btn-gen-img">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px"><rect x="1" y="1" width="14" height="14" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M1 11l4-4 3 3 2-2 5 5"/></svg>
+            ${hasImg ? 'Regenerar imagem' : 'Gerar com DALL-E 3'}
+          </button>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">Requer chave OpenAI configurada · ~$0,04 por imagem</div>
+        </div>
+        <div class="panel-section"><div class="panel-section-title">Paleta de cores</div>
+          <div class="form-group"><label class="form-label">Fundo</label><input type="color" class="form-input" value="${ad.bgColor || '#1e2024'}" oninput="updateAdProp('bgColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+          <div class="form-group"><label class="form-label">Texto</label><input type="color" class="form-input" value="${ad.textColor || '#ffffff'}" oninput="updateAdProp('textColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+          <div class="form-group"><label class="form-label">Destaque</label><input type="color" class="form-input" value="${ad.accentColor || '#d4f24a'}" oninput="updateAdProp('accentColor',this.value)" style="padding:4px;height:36px;cursor:pointer"></div>
+        </div>
+        <div class="panel-section"><div class="panel-section-title">Tamanhos</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${Object.entries(AD_SIZES).map(([k, v]) => `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+              <input type="checkbox" ${(ad.sizes || []).includes(k) ? 'checked' : ''} onchange="toggleSize('${k}',this.checked)">
+              ${v.label}<span style="font-size:10px;color:var(--text3)">${v.w}×${v.h}</span>
+            </label>`).join('')}
+          </div>
+        </div>`;
+    }
 
   } else if (tab === 'export') {
     body.innerHTML = `
@@ -1589,7 +1676,8 @@ function renderPanelContent() {
               <button class="btn btn-ghost btn-sm" onclick="exportAd('${s}')">PNG</button>
             </div>`; }).join('')}
         </div>
-        ${ad.type === 'carousel' ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;justify-content:center" onclick="exportAllSlides()">Exportar todos os slides</button>` : ''}
+        ${!ad.htmlCanvas && ad.type === 'carousel' ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;justify-content:center" onclick="exportAllSlides()">Exportar todos os slides</button>` : ''}
+        ${ad.htmlCanvas ? `<div style="font-size:11px;color:var(--text3);margin-top:12px;line-height:1.5">A exportação usa o canvas em alta resolução (2×). Certifique-se de salvar edições antes de exportar.</div>` : ''}
       </div>`;
   }
 }
@@ -1624,8 +1712,10 @@ function toggleSize(size, checked) {
 async function saveCurrentAd() {
   const ad = state.currentAd;
   if (!ad?.id) return;
+  const payload = { slides: ad.slides, bgColor: ad.bgColor, textColor: ad.textColor, accentColor: ad.accentColor, sizes: ad.sizes, bgImage: ad.bgImage ?? null };
+  if (ad.htmlCanvas !== undefined) payload.htmlCanvas = ad.htmlCanvas;
   try {
-    const updated = await api('ads.php', `action=update&id=${ad.id}`, 'PUT', { slides: ad.slides, bgColor: ad.bgColor, textColor: ad.textColor, accentColor: ad.accentColor, sizes: ad.sizes, bgImage: ad.bgImage ?? null });
+    const updated = await api('ads.php', `action=update&id=${ad.id}`, 'PUT', payload);
     Object.assign(ad, updated);
     const i = state.ads.findIndex(a => a.id === ad.id);
     if (i !== -1) state.ads[i] = ad;
@@ -1680,11 +1770,19 @@ async function regenAd() {
   document.getElementById('gen-overlay').classList.add('show');
   document.getElementById('gen-text').textContent = 'Gerando nova versão...';
   try {
-    state.currentAd.slides = await generateAdWithAI();
-    state.currentSlide = 0;
-    renderCanvas();
-    renderPanelContent();
-    showToast('Nova versão gerada!');
+    if (state.currentAd.htmlCanvas !== null && state.currentAd.htmlCanvas !== undefined) {
+      // V2 regen — ad has AI-generated HTML
+      state.currentAd.htmlCanvas = await generateAdWithAI();
+      renderCanvas();
+      renderPanelContent();
+      showToast('Nova versão gerada! Clique em Salvar para manter.');
+    } else {
+      state.currentAd.slides = await generateAdWithAI();
+      state.currentSlide = 0;
+      renderCanvas();
+      renderPanelContent();
+      showToast('Nova versão gerada!');
+    }
   } catch (e) { showToast(e.message, 'err'); }
   finally { document.getElementById('gen-overlay').classList.remove('show'); }
 }
@@ -1692,23 +1790,33 @@ async function regenAd() {
 async function exportAd(sizeKey) {
   const sz = AD_SIZES[sizeKey] || AD_SIZES.feed;
   const ad = state.currentAd;
-  const slide = ad.slides?.[state.currentSlide] || {};
   const tmp = document.createElement('div');
-  tmp.style.cssText = `position:fixed;left:-9999px;top:0;width:${sz.w}px;height:${sz.h}px;overflow:hidden;font-family:'Syne',sans-serif`;
-  tmp.innerHTML = `<div style="position:relative;width:100%;height:100%;background:${ad.bgColor || '#1e2024'};display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end">
-    <div style="position:absolute;top:28px;right:28px;font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:${ad.accentColor || '#d4f24a'}">${state.currentProject?.logo || ''}</div>
-    <div style="position:relative;z-index:1;padding:${Math.round(sz.h * 0.05)}px">
-      ${slide.tag ? `<div style="font-size:14px;font-weight:500;padding:6px 14px;border-radius:20px;background:${ad.accentColor}22;color:${ad.accentColor};display:inline-block;margin-bottom:18px">${slide.tag}</div>` : ''}
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:${Math.floor(sz.h * 0.065)}px;line-height:1.1;color:${ad.textColor || '#fff'};margin-bottom:16px">${slide.headline || ''}</div>
-      ${slide.body ? `<div style="font-family:'DM Sans',sans-serif;font-weight:300;font-size:${Math.floor(sz.h * 0.022)}px;line-height:1.5;color:${ad.textColor || '#fff'};opacity:.85;margin-bottom:24px">${slide.body}</div>` : ''}
-      ${slide.cta ? `<div style="font-family:'DM Sans',sans-serif;font-weight:500;font-size:${Math.floor(sz.h * 0.018)}px;padding:14px 28px;border-radius:8px;background:${ad.accentColor || '#d4f24a'};color:#0e0f11;display:inline-block">${slide.cta}</div>` : ''}
-    </div>
-  </div>`;
+  tmp.style.cssText = `position:fixed;left:-9999px;top:0;width:${sz.w}px;height:${sz.h}px;overflow:hidden`;
+
+  if (ad.htmlCanvas) {
+    // V2 export: render AI HTML at full size
+    tmp.innerHTML = ad.htmlCanvas;
+    tmp.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+  } else {
+    // V1 export: rebuild fixed template at full size
+    const slide = ad.slides?.[state.currentSlide] || {};
+    tmp.style.fontFamily = "'Syne',sans-serif";
+    tmp.innerHTML = `<div style="position:relative;width:100%;height:100%;background:${ad.bgColor || '#1e2024'};display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end">
+      <div style="position:absolute;top:28px;right:28px;font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:${ad.accentColor || '#d4f24a'}">${state.currentProject?.logo || ''}</div>
+      <div style="position:relative;z-index:1;padding:${Math.round(sz.h * 0.05)}px">
+        ${slide.tag ? `<div style="font-size:14px;font-weight:500;padding:6px 14px;border-radius:20px;background:${ad.accentColor}22;color:${ad.accentColor};display:inline-block;margin-bottom:18px">${slide.tag}</div>` : ''}
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:${Math.floor(sz.h * 0.065)}px;line-height:1.1;color:${ad.textColor || '#fff'};margin-bottom:16px">${slide.headline || ''}</div>
+        ${slide.body ? `<div style="font-family:'DM Sans',sans-serif;font-weight:300;font-size:${Math.floor(sz.h * 0.022)}px;line-height:1.5;color:${ad.textColor || '#fff'};opacity:.85;margin-bottom:24px">${slide.body}</div>` : ''}
+        ${slide.cta ? `<div style="font-family:'DM Sans',sans-serif;font-weight:500;font-size:${Math.floor(sz.h * 0.018)}px;padding:14px 28px;border-radius:8px;background:${ad.accentColor || '#d4f24a'};color:#0e0f11;display:inline-block">${slide.cta}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
   document.body.appendChild(tmp);
   try {
-    const c = await html2canvas(tmp, { scale: 1, useCORS: true, allowTaint: true, width: sz.w, height: sz.h, logging: false });
+    const c = await html2canvas(tmp, { scale: 2, useCORS: true, allowTaint: true, width: sz.w, height: sz.h, logging: false });
     const a = document.createElement('a');
-    a.download = `${ad.name || 'anuncio'}-slide${state.currentSlide + 1}-${sizeKey}.png`;
+    a.download = `${ad.name || 'anuncio'}-${sizeKey}.png`;
     a.href = c.toDataURL('image/png');
     a.click();
   } catch (e) { showToast('Erro ao exportar: ' + e.message, 'err'); }
@@ -1940,28 +2048,11 @@ function renderVoice() {
 
 async function _callAI(prompt) {
   const s = state.aiSettings;
-  const entry = Object.entries(s).find(([, v]) => v.enabled && v.has_key && v.api_key);
-  if (!entry) throw new Error('Nenhum provedor de IA configurado.');
-  const [provider, cfg] = entry;
-  const key = cfg.api_key;
-  const model = cfg.enabled_models?.[0] || PROVIDER_MODELS[provider]?.[0];
-  let content = '';
-  if (provider === 'anthropic') {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-use': 'true' },
-      body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] }),
-    });
-    const d = await r.json(); content = d.content?.[0]?.text || '';
-  } else if (provider === 'openai' || provider === 'groq') {
-    const url = provider === 'groq' ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-    const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 1024 }) });
-    const d = await r.json(); content = d.choices?.[0]?.message?.content || '';
-  } else if (provider === 'google') {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 1024 } }) });
-    const d = await r.json(); content = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  }
-  return content;
+  const provider = Object.keys(s).find(id => s[id]?.enabled && s[id]?.has_key);
+  if (!provider) throw new Error('Nenhum provedor de IA configurado.');
+  const model = s[provider]?.enabled_models?.[0] || PROVIDER_MODELS[provider]?.[0] || '';
+  const result = await api('ai.php', '', 'POST', { provider, model, system_prompt: '', user_prompt: prompt });
+  return result.content;
 }
 
 async function synthesizeVoice() {
@@ -2025,10 +2116,12 @@ async function showSettingsView() {
 }
 
 function switchSettingsTab(tab) {
-  ['users', 'assignments', 'ai'].forEach(t => {
+  ['users', 'assignments', 'ai', 'intelligence'].forEach(t => {
     document.getElementById(`stab-${t}`)?.classList.toggle('active', t === tab);
-    document.getElementById(`stab-content-${t}`).style.display = t === tab ? '' : 'none';
+    const el = document.getElementById(`stab-content-${t}`);
+    if (el) el.style.display = t === tab ? '' : 'none';
   });
+  if (tab === 'intelligence') loadIntelligencePanel();
 }
 
 async function loadUsers() {
@@ -2237,6 +2330,46 @@ async function updateAssignment(userId, projectId, role) {
     await api('users.php', 'action=assign', 'POST', { user_id: userId, project_id: projectId, role });
     showToast('Atribuição salva.');
   } catch (e) { showToast(e.message, 'err'); renderAssignments(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTELLIGENCE PANEL
+// ══════════════════════════════════════════════════════════════
+async function loadIntelligencePanel() {
+  const list = document.getElementById('intel-list');
+  const badge = document.getElementById('intel-count-badge');
+  if (!list) return;
+  list.innerHTML = '<div style="font-size:13px;color:var(--text2)">Carregando...</div>';
+  try {
+    const records = await api('intelligence.php', 'action=list&limit=50');
+    state.platformIntelligence = records || [];
+    if (badge) badge.textContent = `${records.length} padrão${records.length !== 1 ? 'ões' : ''}`;
+    if (!records.length) {
+      list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg><p>Nenhum padrão acumulado ainda. Aprove anúncios nos projetos para começar a gerar inteligência.</p></div>`;
+      return;
+    }
+    list.innerHTML = records.map(r => `<div class="intel-card">
+      <div style="font-size:13px;line-height:1.6">${r.content}</div>
+      <div class="intel-card-meta">
+        ${r.source_project_name ? `Projeto: <strong>${r.source_project_name}</strong>` : ''}
+        ${r.source_ad_name ? ` · Anúncio: ${r.source_ad_name}` : ''}
+        · ${fmtDate(r.created_at)}
+        ${state.user?.role === 'admin' ? `<button onclick="deleteIntelligence(${r.id})" style="margin-left:8px;background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:0">Remover</button>` : ''}
+      </div>
+    </div>`).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="color:var(--red);font-size:13px">${e.message}</div>`;
+  }
+}
+
+async function deleteIntelligence(id) {
+  if (!confirm('Remover este padrão da inteligência da plataforma?')) return;
+  try {
+    await api('intelligence.php', `action=delete&id=${id}`, 'DELETE');
+    state.platformIntelligence = state.platformIntelligence.filter(r => r.id !== id);
+    loadIntelligencePanel();
+    showToast('Padrão removido.');
+  } catch (e) { showToast(e.message, 'err'); }
 }
 
 // ══════════════════════════════════════════════════════════════

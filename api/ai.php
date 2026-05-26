@@ -32,7 +32,7 @@ $content = '';
 if ($provider === 'anthropic') {
     $body = json_encode([
         'model'      => $model,
-        'max_tokens' => 1024,
+        'max_tokens' => 4096,
         'system'     => $system,
         'messages'   => [['role' => 'user', 'content' => $userPrompt]],
     ]);
@@ -55,7 +55,7 @@ if ($provider === 'anthropic') {
     $url = $urls[$provider];
     $body = json_encode([
         'model'      => $model,
-        'max_tokens' => 1024,
+        'max_tokens' => 4096,
         'messages'   => [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $userPrompt],

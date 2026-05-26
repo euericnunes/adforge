@@ -28,9 +28,10 @@ jobs:
             uploads/**
             reset-admin.php
             migrate.php
+            migrate2.php
             database.sql
 
       - name: Remove sensitive files from server
         run: |
           sudo apt-get install -y lftp -qq
-          lftp -c "set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftps://${{ secrets.FTP_HOST }}:21; rm -f migrate.php reset-admin.php 2>/dev/null || true; bye"
+          lftp -c "set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftps://${{ secrets.FTP_HOST }}:21; rm -f migrate.php migrate2.php reset-admin.php 2>/dev/null || true; bye"

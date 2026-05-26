@@ -65,8 +65,8 @@ function handle_create(): void {
     db()->prepare('
         INSERT INTO ads
           (project_id, name, type, objective, status, bg_color, text_color, accent_color,
-           bg_image, slides, sizes, generated_by, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           bg_image, html_canvas, slides, sizes, generated_by, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ')->execute([
         $projectId,
         trim($data['name']),
@@ -77,6 +77,7 @@ function handle_create(): void {
         sanitize_color($data['text_color'] ?? '#ffffff'),
         sanitize_color($data['accent_color'] ?? '#d4f24a'),
         $data['bgImage'] ?? null,
+        $data['htmlCanvas'] ?? null,
         json_encode($slides, JSON_UNESCAPED_UNICODE),
         json_encode($sizes),
         trim($data['generated_by'] ?? ''),
@@ -117,6 +118,10 @@ function handle_update(): void {
     if (array_key_exists('bgImage', $data)) {
         $fields[] = 'bg_image = ?';
         $params[] = $data['bgImage'] ?: null;
+    }
+    if (array_key_exists('htmlCanvas', $data)) {
+        $fields[] = 'html_canvas = ?';
+        $params[] = $data['htmlCanvas'] ?: null;
     }
     foreach (['bg_color','text_color','accent_color'] as $col) {
         $key = str_replace('_', '', lcfirst(ucwords($col, '_')));
@@ -205,6 +210,27 @@ function handle_status(): void {
             $ad['name'],
             'approval',
         ]);
+
+        // Acumula inteligência de plataforma (cross-project learning)
+        $slides = json_decode($ad['slides'] ?? '[]', true) ?: [];
+        $headline = $slides[0]['headline'] ?? '';
+        $body     = $slides[0]['body'] ?? '';
+        $objective = $ad['objective'] ?? 'conversion';
+        $hasHtml   = !empty($ad['html_canvas']);
+        if ($headline || $hasHtml) {
+            $patternContent = "Objetivo: {$objective}";
+            if ($headline) $patternContent .= " | Headline: {$headline}";
+            if ($body)     $patternContent .= " | Texto: {$body}";
+            if ($hasHtml)  $patternContent .= " | Layout: anúncio HTML completo aprovado";
+            $projName = db()->prepare('SELECT name FROM projects WHERE id = ?');
+            $projName->execute([$ad['project_id']]);
+            $pName = $projName->fetchColumn() ?: '';
+            db()->prepare('
+                INSERT INTO platform_intelligence
+                  (pattern_type, content, source_project_id, source_project_name, source_ad_id, source_ad_name)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ')->execute(['copy', $patternContent, $ad['project_id'], $pName, $adId, $ad['name']]);
+        }
     }
 
     db()->prepare('UPDATE ads SET status = ?, rejection_reason = ? WHERE id = ?')
@@ -227,9 +253,10 @@ function handle_duplicate(): void {
     db()->prepare('
         INSERT INTO ads
           (project_id, name, type, objective, status, bg_color, text_color, accent_color,
-           slides, sizes, generated_by, created_by)
+           bg_image, html_canvas, slides, sizes, generated_by, created_by)
         SELECT project_id, CONCAT(name, " (cópia)"), type, objective, "draft",
-               bg_color, text_color, accent_color, slides, sizes, generated_by, ?
+               bg_color, text_color, accent_color, bg_image, html_canvas,
+               slides, sizes, generated_by, ?
         FROM ads WHERE id = ?
     ')->execute([$user['id'], $adId]);
 
@@ -274,11 +301,13 @@ function normalize_ad(array $ad, string $role): array {
     $ad['textColor']   = $ad['text_color'];
     $ad['accentColor'] = $ad['accent_color'];
     $ad['bgImage']     = $ad['bg_image'] ?? null;
+    $ad['htmlCanvas']  = $ad['html_canvas'] ?? null;
     $ad['generatedBy'] = $ad['generated_by'];
     $ad['rejectionReason'] = $ad['rejection_reason'];
     $ad['createdAt']   = $ad['created_at'];
     unset($ad['bg_color'], $ad['text_color'], $ad['accent_color'], $ad['bg_image'],
-          $ad['generated_by'], $ad['rejection_reason'], $ad['created_at'], $ad['updated_at']);
+          $ad['html_canvas'], $ad['generated_by'], $ad['rejection_reason'],
+          $ad['created_at'], $ad['updated_at']);
     return $ad;
 }
 
