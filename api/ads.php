@@ -53,9 +53,10 @@ function handle_create(): void {
     require_project_access($user['id'], $projectId, $user['role'], ['admin', 'editor']);
 
     $slides = is_array($data['slides']) ? $data['slides'] : json_decode($data['slides'], true);
-    if (empty($slides)) json_error('O anúncio precisa de pelo menos 1 slide.');
+    $htmlCanvas = $data['htmlCanvas'] ?? null;
+    if (empty($slides) && !$htmlCanvas) json_error('O anúncio precisa de pelo menos 1 slide.');
 
-    validate_slides($slides);
+    if (!$htmlCanvas) validate_slides($slides);
 
     $type      = in_array($data['type'] ?? '', ['single', 'carousel']) ? $data['type'] : 'single';
     $objective = in_array($data['objective'] ?? '', ['conversion','awareness','engagement','retention'])
