@@ -825,7 +825,7 @@ const state = {
   users: [],
   editingUserId: null,
   refUpload: null,
-  gen: { objective: 'conversion', size: 'feed', style: 'modern', prompt: '', provider: null, model: null },
+  gen: { objective: 'conversion', sizes: ['feed','stories'], style: 'modern', prompt: '', provider: null, model: null },
   currentPanelTab: 'content',
   platformIntelligence: [],
 };
@@ -1246,11 +1246,11 @@ async function deleteAd(id) {
 // ══════════════════════════════════════════════════════════════
 function openGenerator() {
   const prev = state.gen.prompt || '';
-  state.gen = { objective: state.gen.objective || 'conversion', size: state.gen.size || 'feed', style: state.gen.style || 'modern', prompt: prev, provider: state.gen.provider, model: state.gen.model };
+  state.gen = { objective: state.gen.objective || 'conversion', sizes: state.gen.sizes?.length ? state.gen.sizes : ['feed','stories'], style: state.gen.style || 'modern', prompt: prev, provider: state.gen.provider, model: state.gen.model };
   document.getElementById('gen-prompt').value = prev;
   // Restore chip selections
   document.querySelectorAll('#objective-chips .size-chip').forEach(c => c.classList.toggle('selected', c.dataset.obj === state.gen.objective));
-  document.querySelectorAll('#gen-size-chips .size-chip').forEach(c => c.classList.toggle('selected', c.dataset.size === state.gen.size));
+  document.querySelectorAll('#gen-size-chips .size-chip').forEach(c => c.classList.toggle('selected', state.gen.sizes.includes(c.dataset.size)));
   document.querySelectorAll('.style-card').forEach(c => c.classList.toggle('selected', c.dataset.style === state.gen.style));
   renderGenProviderChips();
   openModal('modal-generator');
@@ -1263,9 +1263,15 @@ function selectObjective(el) {
 }
 
 function selectGenSize(el) {
-  state.gen.size = el.dataset.size;
-  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
+  const size = el.dataset.size;
+  if (!state.gen.sizes) state.gen.sizes = ['feed'];
+  const idx = state.gen.sizes.indexOf(size);
+  if (idx >= 0) {
+    if (state.gen.sizes.length > 1) state.gen.sizes.splice(idx, 1); // não deixa desmarcar tudo
+  } else {
+    state.gen.sizes.push(size);
+  }
+  el.closest('.size-chips').querySelectorAll('.size-chip').forEach(c => c.classList.toggle('selected', state.gen.sizes.includes(c.dataset.size)));
 }
 
 function selectGenStyle(el) {
@@ -1333,11 +1339,14 @@ async function startGeneration() {
   closeModal('modal-generator');
   showView('editor');
 
-  const sz = AD_SIZES[state.gen.size] || AD_SIZES.feed;
+  const selectedSizes = state.gen.sizes?.length ? state.gen.sizes : ['feed'];
+  const baseName = `Anúncio ${new Date().toLocaleDateString('pt-BR')} — ${state.gen.objective}`;
+  const sizeLabel = { feed: 'Feed 1:1', stories: 'Stories 9:16', landscape: 'Paisagem 16:9', portrait: 'Retrato 4:5' };
+
   const placeholder = {
     id: null, name: 'Gerando anúncio...', type: 'single', objective: state.gen.objective,
     bgColor: '#1e2024', textColor: '#ffffff', accentColor: state.currentProject?.color || '#d4f24a',
-    slides: [{ headline: '', body: '', cta: '' }], sizes: [state.gen.size], status: 'draft',
+    slides: [{ headline: '', body: '', cta: '' }], sizes: [selectedSizes[0]], status: 'draft',
     htmlCanvas: null,
   };
   state.currentAd = placeholder;
@@ -1345,27 +1354,38 @@ async function startGeneration() {
   state.currentPanelTab = 'content';
   renderEditor();
   document.getElementById('gen-overlay').classList.add('show');
-  document.getElementById('gen-text').textContent = 'A IA está criando seu anúncio...';
+
+  const genText = document.getElementById('gen-text');
+  const savedAds = [];
 
   try {
-    const htmlCanvas = await generateAdWithAI();
-    placeholder.htmlCanvas = htmlCanvas;
-    const saved = await api('ads.php', 'action=create', 'POST', {
-      project_id: state.currentProject.id,
-      name: `Anúncio ${new Date().toLocaleDateString('pt-BR')} — ${state.gen.objective}`,
-      type: 'single', objective: state.gen.objective,
-      slides: [{ headline: '', body: '', cta: '' }],
-      sizes: [state.gen.size],
-      bgColor: placeholder.bgColor,
-      textColor: placeholder.textColor,
-      accentColor: placeholder.accentColor,
-      htmlCanvas,
-      generated_by: `${state.gen.provider}/${state.gen.model}`,
-    });
-    state.currentAd = saved;
-    state.ads.unshift(saved);
+    for (let i = 0; i < selectedSizes.length; i++) {
+      const sizeKey = selectedSizes[i];
+      genText.textContent = selectedSizes.length > 1
+        ? `Gerando ${i + 1} de ${selectedSizes.length}: ${sizeLabel[sizeKey] || sizeKey}...`
+        : 'A IA está criando seu anúncio...';
+
+      const htmlCanvas = await generateAdWithAI(sizeKey);
+      const adName = selectedSizes.length > 1 ? `${baseName} · ${sizeLabel[sizeKey] || sizeKey}` : baseName;
+
+      const saved = await api('ads.php', 'action=create', 'POST', {
+        project_id: state.currentProject.id,
+        name: adName,
+        type: 'single', objective: state.gen.objective,
+        slides: [{ headline: '', body: '', cta: '' }],
+        sizes: [sizeKey],
+        bgColor: placeholder.bgColor,
+        textColor: placeholder.textColor,
+        accentColor: placeholder.accentColor,
+        htmlCanvas,
+        generated_by: `${state.gen.provider}/${state.gen.model}`,
+      });
+      savedAds.push(saved);
+      state.ads.unshift(saved);
+    }
+    state.currentAd = savedAds[0];
     renderEditor();
-    showToast('Anúncio gerado!');
+    showToast(savedAds.length > 1 ? `${savedAds.length} anúncios gerados!` : 'Anúncio gerado!');
   } catch (e) {
     showToast('Erro ao gerar: ' + e.message, 'err');
     showView('ads');
@@ -1375,8 +1395,9 @@ async function startGeneration() {
   }
 }
 
-async function generateAdWithAI() {
-  const { provider, model, objective, prompt, style, size } = state.gen;
+async function generateAdWithAI(sizeOverride) {
+  const { provider, model, objective, prompt, style } = state.gen;
+  const size = sizeOverride || state.gen.sizes?.[0] || 'feed';
   const brain = buildBrainContext();
   const p = state.currentProject;
   const sz = AD_SIZES[size] || AD_SIZES.feed;
@@ -1772,8 +1793,9 @@ async function regenAd() {
   document.getElementById('gen-text').textContent = 'Gerando nova versão...';
   try {
     if (state.currentAd.htmlCanvas !== null && state.currentAd.htmlCanvas !== undefined) {
-      // V2 regen — ad has AI-generated HTML
-      state.currentAd.htmlCanvas = await generateAdWithAI();
+      // V2 regen — use the ad's own size
+      const adSize = (state.currentAd.sizes || ['feed'])[0];
+      state.currentAd.htmlCanvas = await generateAdWithAI(adSize);
       renderCanvas();
       renderPanelContent();
       showToast('Nova versão gerada! Clique em Salvar para manter.');
