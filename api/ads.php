@@ -66,8 +66,8 @@ function handle_create(): void {
     db()->prepare('
         INSERT INTO ads
           (project_id, name, type, objective, status, bg_color, text_color, accent_color,
-           bg_image, html_canvas, slides, sizes, generated_by, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           html_canvas, slides, sizes, generated_by, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ')->execute([
         $projectId,
         trim($data['name']),
@@ -77,7 +77,6 @@ function handle_create(): void {
         sanitize_color($data['bg_color'] ?? '#1e2024'),
         sanitize_color($data['text_color'] ?? '#ffffff'),
         sanitize_color($data['accent_color'] ?? '#d4f24a'),
-        $data['bgImage'] ?? null,
         $data['htmlCanvas'] ?? null,
         json_encode($slides, JSON_UNESCAPED_UNICODE),
         json_encode($sizes),
@@ -254,9 +253,9 @@ function handle_duplicate(): void {
     db()->prepare('
         INSERT INTO ads
           (project_id, name, type, objective, status, bg_color, text_color, accent_color,
-           bg_image, html_canvas, slides, sizes, generated_by, created_by)
+           html_canvas, slides, sizes, generated_by, created_by)
         SELECT project_id, CONCAT(name, " (cópia)"), type, objective, "draft",
-               bg_color, text_color, accent_color, bg_image, html_canvas,
+               bg_color, text_color, accent_color, html_canvas,
                slides, sizes, generated_by, ?
         FROM ads WHERE id = ?
     ')->execute([$user['id'], $adId]);
@@ -301,12 +300,12 @@ function normalize_ad(array $ad, string $role): array {
     $ad['bgColor']     = $ad['bg_color'];
     $ad['textColor']   = $ad['text_color'];
     $ad['accentColor'] = $ad['accent_color'];
-    $ad['bgImage']     = $ad['bg_image'] ?? null;
+    $ad['bgImage']     = null; // bg_image não existe no schema atual
     $ad['htmlCanvas']  = $ad['html_canvas'] ?? null;
     $ad['generatedBy'] = $ad['generated_by'];
     $ad['rejectionReason'] = $ad['rejection_reason'];
     $ad['createdAt']   = $ad['created_at'];
-    unset($ad['bg_color'], $ad['text_color'], $ad['accent_color'], $ad['bg_image'],
+    unset($ad['bg_color'], $ad['text_color'], $ad['accent_color'],
           $ad['html_canvas'], $ad['generated_by'], $ad['rejection_reason'],
           $ad['created_at'], $ad['updated_at']);
     return $ad;
