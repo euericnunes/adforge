@@ -1454,7 +1454,8 @@ REGRAS TÉCNICAS OBRIGATÓRIAS (apenas estas):
 2. O elemento raiz deve ter exatamente: style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;box-sizing:border-box"
 3. Use atributos style="" inline nos elementos — não use classes CSS externas (podem conflitar com a página).
 4. Marque os textos que o usuário poderá editar com data-editable="headline", data-editable="body", data-editable="cta" ou data-editable="tag".
-5. Se precisar de fontes externas, inclua o @import dentro de uma tag <style> no início do HTML.`;
+5. Se precisar de fontes externas, inclua o @import dentro de uma tag <style> no início do HTML.
+6. Todos os textos marcados com data-editable devem estar completamente legíveis e visíveis — nunca cobertos por elementos decorativos. Use z-index para garantir que o conteúdo textual fique sempre na frente das formas e fundos.`;
 
   const USER = `══════════════════════════════════
 BRIEFING CRIATIVO DO ANÚNCIO
