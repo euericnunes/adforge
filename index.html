@@ -1357,6 +1357,7 @@ async function startGeneration() {
 
   const genText = document.getElementById('gen-text');
   const savedAds = [];
+  const errors = [];
 
   try {
     for (let i = 0; i < selectedSizes.length; i++) {
@@ -1365,27 +1366,38 @@ async function startGeneration() {
         ? `Gerando ${i + 1} de ${selectedSizes.length}: ${sizeLabel[sizeKey] || sizeKey}...`
         : 'A IA está criando seu anúncio...';
 
-      const htmlCanvas = await generateAdWithAI(sizeKey);
-      const adName = selectedSizes.length > 1 ? `${baseName} · ${sizeLabel[sizeKey] || sizeKey}` : baseName;
+      try {
+        const htmlCanvas = await generateAdWithAI(sizeKey);
+        const adName = selectedSizes.length > 1 ? `${baseName} · ${sizeLabel[sizeKey] || sizeKey}` : baseName;
 
-      const saved = await api('ads.php', 'action=create', 'POST', {
-        project_id: state.currentProject.id,
-        name: adName,
-        type: 'single', objective: state.gen.objective,
-        slides: [{ headline: '', body: '', cta: '' }],
-        sizes: [sizeKey],
-        bgColor: placeholder.bgColor,
-        textColor: placeholder.textColor,
-        accentColor: placeholder.accentColor,
-        htmlCanvas,
-        generated_by: `${state.gen.provider}/${state.gen.model}`,
-      });
-      savedAds.push(saved);
-      state.ads.unshift(saved);
+        const saved = await api('ads.php', 'action=create', 'POST', {
+          project_id: state.currentProject.id,
+          name: adName,
+          type: 'single', objective: state.gen.objective,
+          slides: [{ headline: '', body: '', cta: '' }],
+          sizes: [sizeKey],
+          bgColor: placeholder.bgColor,
+          textColor: placeholder.textColor,
+          accentColor: placeholder.accentColor,
+          htmlCanvas,
+          generated_by: `${state.gen.provider}/${state.gen.model}`,
+        });
+        savedAds.push(saved);
+        state.ads.unshift(saved);
+      } catch (e) {
+        errors.push(`${sizeLabel[sizeKey] || sizeKey}: ${e.message}`);
+      }
     }
-    state.currentAd = savedAds[0];
-    renderEditor();
-    showToast(savedAds.length > 1 ? `${savedAds.length} anúncios gerados!` : 'Anúncio gerado!');
+
+    if (savedAds.length === 0) {
+      showToast('Erro ao gerar: ' + errors.join(', '), 'err');
+      showView('ads');
+    } else {
+      state.currentAd = savedAds[0];
+      renderEditor();
+      if (errors.length) showToast(`${savedAds.length} de ${selectedSizes.length} gerados. Falha: ${errors.join(', ')}`, 'warn');
+      else showToast(savedAds.length > 1 ? `${savedAds.length} anúncios gerados!` : 'Anúncio gerado!');
+    }
   } catch (e) {
     showToast('Erro ao gerar: ' + e.message, 'err');
     showView('ads');
@@ -1417,23 +1429,36 @@ async function generateAdWithAI(sizeOverride) {
     retention:   'Retenção: valoriza quem já é cliente. Tom exclusivo, benefício de fidelidade, comunidade.',
   }[objective] || '';
 
-  const SYSTEM = `Você é um designer de anúncios digitais de classe mundial. Cria HTML/CSS puro que resulta em anúncios profissionais visualmente impressionantes para redes sociais.
+  const SYSTEM = `Você é um art director sênior de agência tier-1. Cria HTML/CSS que produz anúncios digitais VISUALMENTE IMPRESSIONANTES.
 
-REGRAS ABSOLUTAS:
-- Retorne SOMENTE o HTML. Zero explicações, zero markdown, zero backticks.
-- Use APENAS estilos inline (style="..."). NENHUMA tag <style>, NENHUMA classe CSS externa.
-- O elemento raiz DEVE ser: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif">
-- Marque textos editáveis com data-editable="headline", data-editable="body", data-editable="cta", data-editable="tag"
-- Fontes disponíveis: 'Syne' (títulos impactantes, bold), 'DM Sans' (texto, body)
-- Use APENAS CSS gradients, formas geométricas e cores para o visual. Sem imagens externas.
-- O resultado deve ser IDÊNTICO a um anúncio de agência premium de publicidade.`;
+REGRAS TÉCNICAS (sem exceção):
+- Retorne SOMENTE o HTML. Zero texto, zero markdown, zero backticks.
+- Use APENAS estilos inline style="...". ZERO tags <style>, ZERO classes CSS.
+- Elemento raiz: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif">
+- Marque textos com data-editable: "headline", "body", "cta", "tag"
+- Fontes: 'Syne' (títulos, sempre font-weight:700+), 'DM Sans' (corpo, botões)
+- Visual: use CSS gradients, background-color, border, box-shadow, transform, clip-path. ZERO imagens src externas.
 
-  const USER = `Crie um anúncio social de ${sz.w}×${sz.h}px.
+PADRÕES DE QUALIDADE (todos obrigatórios):
+1. BACKGROUND: nunca cor lisa simples. Use gradient multi-stop, dois blocos de cor sobrepostos, ou padrão geométrico CSS
+2. HEADLINE: tamanho mínimo ${sz.w >= 1080 ? '72px' : '60px'}, Syne bold, deve dominar visualmente 30-50% do canvas
+3. ELEMENTO ÂNCORA: pelo menos 1 forma geométrica grande (div com border-radius:50%, retângulo diagonal com transform:rotate, linha decorativa) que crie profundidade e interesse visual
+4. CAMADAS: monte em 4 camadas — (1) fundo decorativo, (2) elemento geométrico âncora, (3) textos, (4) CTA button
+5. CTA BUTTON: padding mínimo 14px 28px, border-radius 4-50px, cor que contraste forte com o fundo, font-weight:600
+6. MARCA: nome no topo (canto esquerdo ou direito), 13-15px, Syne 800, letra-spacing positivo
+7. COMPOSIÇÃO: evite tudo centralizado. Prefira alinhamento esquerdo, headlines ancoradas no terço inferior, ou layouts split assimétricos
+
+PATTERNS DE LAYOUT RECOMENDADOS:
+- "Headline Dominante": texto gigante (80%+ da largura) com shape geométrico de apoio
+- "Split Color": bloco colorido em metade do canvas, texto na outra metade
+- "Layered Depth": círculo/forma grande em background, headline sobre ela, CTA no rodapé
+- "Bold Diagonal": elemento diagonal (transform:rotate) cria movimento e energia`;
+
+  const USER = `Crie um anúncio social de ${sz.w}×${sz.h}px para ${size === 'stories' ? 'Stories/Reels (formato vertical 9:16)' : size === 'landscape' ? 'banner horizontal (16:9)' : size === 'portrait' ? 'feed retrato (4:5)' : 'feed quadrado (1:1)'}.
 
 == MARCA ==
-Projeto: ${p?.name || ''}
-Logo/Nome da marca: ${p?.logo || p?.name || ''}
-Cor de destaque da marca: ${p?.color || '#d4f24a'}
+Nome: ${p?.name || ''}
+Cor de destaque: ${p?.color || '#d4f24a'}
 ${p?.context ? `Contexto: ${p.context}` : ''}
 ${brain ? `\n== CÉREBRO DA MARCA ==\n${brain}` : ''}
 ${intel ? intel : ''}
@@ -1442,20 +1467,11 @@ ${intel ? intel : ''}
 Objetivo: ${objective} — ${objGuide}
 O que anunciar: ${prompt}
 
-== ESTILO VISUAL ==
+== ESTILO VISUAL OBRIGATÓRIO ==
 ${styleGuide}
+Não crie um template genérico. Este anúncio deve parecer feito por uma agência premium para um cliente de alto padrão.
 
-== DIRETRIZES DE DESIGN ==
-- Crie visual de agência premium, não template genérico
-- Tipografia: use Syne para headlines (font-weight:700 ou 800), DM Sans para corpo
-- Hierarquia: headline domina, body apoia, CTA converte
-- O logo/nome da marca deve aparecer discretamente (canto superior, 13-16px, font-family:Syne, font-weight:800)
-- Use data-editable nos textos: headline principal, body/subtítulo, CTA button, tag/categoria
-- Paleta baseada na cor de destaque da marca com variações elegantes
-- Background: gradiente criativo ou cor sólida (NO branco puro)
-- Elementos decorativos geométricos podem enriquecer o design (círculos, linhas, formas)
-
-Retorne o HTML agora:`;
+Retorne APENAS o HTML:`;
 
   const result = await api('ai.php', '', 'POST', {
     provider, model,
