@@ -2,6 +2,8 @@
 // AdForge — ai.php
 // POST { provider, model, system_prompt, user_prompt } → { content: string }
 
+set_time_limit(120); // geração de HTML pode levar até 2 min
+
 require_once __DIR__ . '/config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_error('Método inválido.', 405);
@@ -92,7 +94,7 @@ function curl_post(string $url, string $body, array $headers): string {
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $body,
         CURLOPT_HTTPHEADER     => $headers,
-        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_TIMEOUT        => 90,
     ]);
     $res = curl_exec($ch);
     $err = curl_error($ch);
