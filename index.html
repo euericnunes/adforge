@@ -1445,13 +1445,12 @@ async function generateAdWithAI(sizeOverride) {
 
   const SYSTEM = `Você é um designer de anúncios digitais. Crie o anúncio exatamente como descrito no briefing do usuário.
 
-REGRAS TÉCNICAS (obrigatórias):
-- Retorne SOMENTE o HTML bruto. ZERO texto fora do HTML, ZERO markdown, ZERO backticks, ZERO explicações.
-- Use APENAS atributos style="" inline. ZERO tag <style>, ZERO classes CSS.
-- Elemento raiz: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif;box-sizing:border-box">
-- Fontes disponíveis (já carregadas na página): 'Syne' (peso 700/800) e 'DM Sans' (peso 400/500/700)
-- Visuais CSS puro: linear-gradient, radial-gradient, clip-path, box-shadow, border-radius, transform. ZERO src= com imagens externas.
-- Marque textos editáveis com: data-editable="headline" | data-editable="body" | data-editable="cta" | data-editable="tag"`;
+REGRAS TÉCNICAS OBRIGATÓRIAS (apenas estas):
+1. Retorne SOMENTE o HTML. ZERO texto fora do HTML, ZERO markdown, ZERO backticks.
+2. O elemento raiz deve ter exatamente: style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;box-sizing:border-box"
+3. Use atributos style="" inline nos elementos — não use classes CSS externas (podem conflitar com a página).
+4. Marque os textos que o usuário poderá editar com data-editable="headline", data-editable="body", data-editable="cta" ou data-editable="tag".
+5. Se precisar de fontes externas, inclua o @import dentro de uma tag <style> no início do HTML.`;
 
   const USER = `══════════════════════════════════
 BRIEFING CRIATIVO DO ANÚNCIO
