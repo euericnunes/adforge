@@ -1393,15 +1393,19 @@ async function startGeneration() {
     if (savedAds.length === 0) {
       showToast('Erro ao gerar: ' + errors.join(' | '), 'err');
       showView('ads');
-    } else {
+    } else if (savedAds.length === 1) {
+      // Um único anúncio: abre direto no editor
       state.currentAd = savedAds[0];
       renderEditor();
-      if (errors.length) {
-        // Falha parcial: mostra erro em vermelho com mais detalhes
-        showToast(`⚠ ${savedAds.length} de ${selectedSizes.length} gerado${savedAds.length > 1 ? 's' : ''}. Falhou: ${errors.join(' | ')}`, 'err');
-      } else {
-        showToast(savedAds.length > 1 ? `✓ ${savedAds.length} anúncios gerados!` : '✓ Anúncio gerado!');
-      }
+      showView('editor');
+      if (errors.length) showToast(`⚠ Falhou: ${errors.join(' | ')}`, 'err');
+      else showToast('✓ Anúncio gerado!');
+    } else {
+      // Múltiplos anúncios: vai para a lista para o usuário ver todos
+      renderAds();
+      showView('ads');
+      if (errors.length) showToast(`⚠ ${savedAds.length} de ${selectedSizes.length} gerados. Falhou: ${errors.join(' | ')}`, 'err');
+      else showToast(`✓ ${savedAds.length} anúncios gerados! Clique em um para editar.`);
     }
   } catch (e) {
     showToast('Erro ao gerar: ' + e.message, 'err');
