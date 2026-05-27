@@ -1385,18 +1385,23 @@ async function startGeneration() {
         savedAds.push(saved);
         state.ads.unshift(saved);
       } catch (e) {
+        console.error(`Falha ao gerar ${sizeKey}:`, e);
         errors.push(`${sizeLabel[sizeKey] || sizeKey}: ${e.message}`);
       }
     }
 
     if (savedAds.length === 0) {
-      showToast('Erro ao gerar: ' + errors.join(', '), 'err');
+      showToast('Erro ao gerar: ' + errors.join(' | '), 'err');
       showView('ads');
     } else {
       state.currentAd = savedAds[0];
       renderEditor();
-      if (errors.length) showToast(`${savedAds.length} de ${selectedSizes.length} gerados. Falha: ${errors.join(', ')}`, 'warn');
-      else showToast(savedAds.length > 1 ? `${savedAds.length} anúncios gerados!` : 'Anúncio gerado!');
+      if (errors.length) {
+        // Falha parcial: mostra erro em vermelho com mais detalhes
+        showToast(`⚠ ${savedAds.length} de ${selectedSizes.length} gerado${savedAds.length > 1 ? 's' : ''}. Falhou: ${errors.join(' | ')}`, 'err');
+      } else {
+        showToast(savedAds.length > 1 ? `✓ ${savedAds.length} anúncios gerados!` : '✓ Anúncio gerado!');
+      }
     }
   } catch (e) {
     showToast('Erro ao gerar: ' + e.message, 'err');
@@ -1415,63 +1420,68 @@ async function generateAdWithAI(sizeOverride) {
   const sz = AD_SIZES[size] || AD_SIZES.feed;
   const intel = await getPlatformIntelligence();
 
+  const sizeLabel = {
+    feed:      'Feed quadrado 1:1 (Instagram/Facebook feed)',
+    stories:   'Stories vertical 9:16 (Instagram/Facebook Stories — scroll-stopper)',
+    landscape: 'Paisagem 16:9 (YouTube/Display)',
+    portrait:  'Retrato 4:5 (Facebook/Instagram retrato)',
+  }[size] || `${sz.w}×${sz.h}px`;
+
   const styleGuide = {
-    modern:      'Design moderno e profissional. Geometrias limpas, tipografia forte, hierarquia visual clara, uso generoso de espaço negativo.',
-    bold:        'Design ousado e impactante. Cores vibrantes e contrastantes, tipografia XL que domina o espaço, energia visual máxima.',
-    minimal:     'Design minimalista e elegante. Muito espaço em branco, paleta reduzida (2-3 cores), elementos essenciais apenas, luxo pelo que falta.',
-    typographic: 'Design tipográfico criativo. O texto É o design. Jogos de peso, tamanho e posição das fontes criam o impacto visual.',
-  }[style] || '';
+    modern:      'Moderno e profissional: geometrias limpas, tipografia forte, hierarquia visual clara, espaço negativo generoso.',
+    bold:        'Ousado e impactante: cores vibrantes contrastantes, tipografia XL dominante, energia visual máxima, nada de timidez.',
+    minimal:     'Minimalista e elegante: muito espaço branco, paleta de 2-3 cores, elementos essenciais apenas — o luxo está no que falta.',
+    typographic: 'Tipográfico criativo: o texto É o design. Jogos de peso, tamanho e posição das fontes criam o impacto visual.',
+  }[style] || 'Moderno e profissional.';
 
   const objGuide = {
-    conversion:  'Foco em conversão: urgência, oferta clara, CTA irresistível. O usuário deve agir AGORA.',
-    awareness:   'Brand awareness: nome da marca em destaque, mensagem memorável, identidade forte. O usuário deve lembrar.',
-    engagement:  'Engajamento: provocativo, curioso ou emocional. O usuário deve reagir, comentar ou compartilhar.',
-    retention:   'Retenção: valoriza quem já é cliente. Tom exclusivo, benefício de fidelidade, comunidade.',
-  }[objective] || '';
+    conversion:  'Conversão: urgência clara, oferta irresistível, CTA que pede ação AGORA.',
+    awareness:   'Awareness: marca em destaque, mensagem memorável, identidade forte — o usuário deve lembrar.',
+    engagement:  'Engajamento: provocativo, curioso ou emocional — o usuário reage, comenta ou compartilha.',
+    retention:   'Retenção: valoriza quem já é cliente. Tom exclusivo, benefício de fidelidade.',
+  }[objective] || 'Conversão.';
 
-  const SYSTEM = `Você é um art director sênior de agência tier-1. Cria HTML/CSS que produz anúncios digitais VISUALMENTE IMPRESSIONANTES.
+  const accent = p?.color || '#d4f24a';
 
-REGRAS TÉCNICAS (sem exceção):
-- Retorne SOMENTE o HTML. Zero texto, zero markdown, zero backticks.
-- Use APENAS estilos inline style="...". ZERO tags <style>, ZERO classes CSS.
-- Elemento raiz: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif">
-- Marque textos com data-editable: "headline", "body", "cta", "tag"
-- Fontes: 'Syne' (títulos, sempre font-weight:700+), 'DM Sans' (corpo, botões)
-- Visual: use CSS gradients, background-color, border, box-shadow, transform, clip-path. ZERO imagens src externas.
+  const SYSTEM = `Você é um diretor de arte sênior especializado em criativos pagos para Meta/Instagram. Crie anúncios de qualidade agência — o tipo que gera resultado real.
 
-PADRÕES DE QUALIDADE (todos obrigatórios):
-1. BACKGROUND: nunca cor lisa simples. Use gradient multi-stop, dois blocos de cor sobrepostos, ou padrão geométrico CSS
-2. HEADLINE: tamanho mínimo ${sz.w >= 1080 ? '72px' : '60px'}, Syne bold, deve dominar visualmente 30-50% do canvas
-3. ELEMENTO ÂNCORA: pelo menos 1 forma geométrica grande (div com border-radius:50%, retângulo diagonal com transform:rotate, linha decorativa) que crie profundidade e interesse visual
-4. CAMADAS: monte em 4 camadas — (1) fundo decorativo, (2) elemento geométrico âncora, (3) textos, (4) CTA button
-5. CTA BUTTON: padding mínimo 14px 28px, border-radius 4-50px, cor que contraste forte com o fundo, font-weight:600
-6. MARCA: nome no topo (canto esquerdo ou direito), 13-15px, Syne 800, letra-spacing positivo
-7. COMPOSIÇÃO: evite tudo centralizado. Prefira alinhamento esquerdo, headlines ancoradas no terço inferior, ou layouts split assimétricos
+REGRAS TÉCNICAS (invioláveis):
+- Retorne SOMENTE o HTML bruto. ZERO texto fora do HTML, ZERO markdown, ZERO backticks, ZERO explicações.
+- Use APENAS atributos style="" inline. ZERO tag <style>, ZERO classes CSS.
+- Elemento raiz obrigatório: <div style="width:${sz.w}px;height:${sz.h}px;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif;box-sizing:border-box">
+- Fontes disponíveis (já carregadas na página): 'Syne' (peso 700/800 — títulos) e 'DM Sans' (peso 400/500/700 — corpo e botões)
+- Visuais: linear-gradient, radial-gradient, clip-path, box-shadow, border-radius, transform, opacity. ZERO src= com imagens externas.
+- Textos editáveis OBRIGATÓRIOS — marque com: data-editable="headline" | data-editable="body" | data-editable="cta" | data-editable="tag"
 
-PATTERNS DE LAYOUT RECOMENDADOS:
-- "Headline Dominante": texto gigante (80%+ da largura) com shape geométrico de apoio
-- "Split Color": bloco colorido em metade do canvas, texto na outra metade
-- "Layered Depth": círculo/forma grande em background, headline sobre ela, CTA no rodapé
-- "Bold Diagonal": elemento diagonal (transform:rotate) cria movimento e energia`;
+PADRÕES DE QUALIDADE OBRIGATÓRIOS:
+- FUNDO: gradient rico com 2-3 cores — NUNCA cor sólida sozinha. Use a cor de destaque da marca como base.
+- CAMADAS: organize em depth — background (z-index:0) → elementos decorativos (z-index:1) → conteúdo (z-index:2) → logo/marca (z-index:3)
+- TIPOGRAFIA: hierarquia clara — headline ${size === 'stories' ? '52-72px' : '40-60px'} Syne bold → subtítulo/corpo 14-16px DM Sans → CTA 13-15px
+- BOTÃO CTA: estilizado com padding (12px 24px+), border-radius (8-50px), cor de destaque, font-weight:700
+- ELEMENTOS DECORATIVOS: formas geométricas com gradients, clip-path diagonal, círculos com opacity, linhas — para criar profundidade
+- ESPAÇAMENTO: padding mínimo 28px das bordas — nunca deixar texto colado na borda
+- LOGO/MARCA: nome da marca posicionado (topo ou fundo) com font-size pequeno (12-14px) Syne bold`;
 
-  const USER = `Crie um anúncio social de ${sz.w}×${sz.h}px para ${size === 'stories' ? 'Stories/Reels (formato vertical 9:16)' : size === 'landscape' ? 'banner horizontal (16:9)' : size === 'portrait' ? 'feed retrato (4:5)' : 'feed quadrado (1:1)'}.
+  const USER = `══════════════════════════════════
+BRIEFING CRIATIVO DO ANÚNCIO
+══════════════════════════════════
 
-== MARCA ==
-Nome: ${p?.name || ''}
-Cor de destaque: ${p?.color || '#d4f24a'}
-${p?.context ? `Contexto: ${p.context}` : ''}
-${brain ? `\n== CÉREBRO DA MARCA ==\n${brain}` : ''}
+FORMATO: ${sizeLabel} (${sz.w}×${sz.h}px)
+MARCA: ${p?.name || ''}
+COR DE DESTAQUE: ${accent}
+OBJETIVO: ${objective} — ${objGuide}
+${p?.context ? `CONTEXTO DA MARCA: ${p.context}` : ''}
+${brain ? `\nIDENTIDADE E VOZ DA MARCA:\n${brain}` : ''}
 ${intel ? intel : ''}
 
-== BRIEFING ==
-Objetivo: ${objective} — ${objGuide}
-O que anunciar: ${prompt}
+══════════════════════════════════
+DIREÇÃO CRIATIVA (EXECUTE ISSO):
+${prompt}
+══════════════════════════════════
 
-== ESTILO VISUAL OBRIGATÓRIO ==
-${styleGuide}
-Não crie um template genérico. Este anúncio deve parecer feito por uma agência premium para um cliente de alto padrão.
+ESTILO: ${styleGuide}
 
-Retorne APENAS o HTML:`;
+Execute a direção criativa acima. Crie um anúncio ${sizeLabel} de nível profissional para a marca ${p?.name || ''}. Retorne APENAS o HTML:`;
 
   const result = await api('ai.php', '', 'POST', {
     provider, model,
@@ -1480,9 +1490,9 @@ Retorne APENAS o HTML:`;
   });
 
   let html = result.content.trim();
-  // Strip any accidental markdown backticks
+  // Remove markdown backticks acidentais
   html = html.replace(/^```html?\s*/i, '').replace(/\s*```$/, '').trim();
-  if (!html.includes('data-editable')) throw new Error('HTML gerado sem elementos editáveis. Tente novamente.');
+  if (!html || !html.includes('<div')) throw new Error('Resposta inválida da IA. Tente novamente.');
   return html;
 }
 

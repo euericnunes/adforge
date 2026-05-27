@@ -34,7 +34,7 @@ $content = '';
 if ($provider === 'anthropic') {
     $body = json_encode([
         'model'      => $model,
-        'max_tokens' => 4096,
+        'max_tokens' => 8192,
         'system'     => $system,
         'messages'   => [['role' => 'user', 'content' => $userPrompt]],
     ]);
@@ -57,7 +57,7 @@ if ($provider === 'anthropic') {
     $url = $urls[$provider];
     $body = json_encode([
         'model'      => $model,
-        'max_tokens' => 4096,
+        'max_tokens' => 8192,
         'messages'   => [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $userPrompt],
@@ -75,7 +75,7 @@ if ($provider === 'anthropic') {
     $url  = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$key}";
     $body = json_encode([
         'contents'         => [['parts' => [['text' => $system . "\n\n" . $userPrompt]]]],
-        'generationConfig' => ['maxOutputTokens' => 1024],
+        'generationConfig' => ['maxOutputTokens' => 8192],
     ]);
     $res = curl_post($url, $body, ['Content-Type: application/json']);
     $d   = json_decode($res, true);
